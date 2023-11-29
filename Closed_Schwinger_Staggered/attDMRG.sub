@@ -2,7 +2,7 @@ environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULI
 
 executable = /lustre/fs24/group/cqta/tangelides/julia-1.8.5/bin/julia
 
-arguments = $(path_to_project)/$(file_to_run) $N $tau $cutoff $tol $x $l_0 $mg $max_steps $project_number $get_dmrg $h5_path $measure_every $h5_previous_path
+arguments = $(path_to_project)/$(file_to_run) $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(mg) $(max_steps) $(project_number) $(get_dmrg) $(h5_path) $(measure_every) $(h5_previous_path)
 
 transfer_input_files = $(path_to_project)/$(file_to_run)
 

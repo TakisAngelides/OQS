@@ -1,5 +1,6 @@
 using ITensors
 using LinearAlgebra
+using HDF5
 include("Utilities.jl")
 
 N = parse(Int, ARGS[1])
@@ -12,15 +13,15 @@ mg = parse(Float64, ARGS[7])
 max_steps = parse(Int, ARGS[8])
 project_number = parse(Int, ARGS[9])
 get_dmrg = parse(Bool, ARGS[10])
-h5_path = parse(String, ARGS[11])
+h5_path = ARGS[11]
 measure_every = parse(Int, ARGS[12])
-h5_previous_path = parse(String, ARGS[13])
-sites = siteinds("S=1/2", N, conserve_qns = true) 
+h5_previous_path = ARGS[13]
 file = h5open(h5_path, "w")
-write(file, "sites", sites)
 
 function get_dmrg_results()
 
+    sites = siteinds("S=1/2", N, conserve_qns = true) 
+    write(file, "sites_dmrg", sites)
     H = get_Hamiltonian(sites, x, l_0, mg)
     state = [isodd(n) ? "0" : "1" for n = 1:N]
     psi0 = randomMPS(sites, state, linkdims = 2)
@@ -37,9 +38,9 @@ end
 function run_iattDMRG()
 
     t = time()
-    H = get_Hamiltonian(sites, x, l_0, mg)
     
-    if h5_previous_path[end] != "5" 
+    if h5_previous_path == "None" 
+        sites = siteinds("S=1/2", N, conserve_qns = true) 
         println("Initializing with a random MPS\n")
         flush(stdout)
         state = [isodd(n) ? "0" : "1" for n = 1:N]
@@ -50,22 +51,26 @@ function run_iattDMRG()
         previous_file = h5open(h5_previous_path, "r")
         keys_previous_file = keys(previous_file)
         mps_keys = filter(key -> occursin("mps_", key), keys_previous_file)
-        max_mps_key_num = argmax(mps_keys)
-        max_mps_key = "mps_$(max_mps_key_num)"
+        max_mps_key_num = mps_keys[argmax(parse.(Int, [split(item, "_")[2] for item in mps_keys]))]
+        max_mps_key = "$(max_mps_key_num)"
         mps = read(previous_file, max_mps_key, MPS)
-        sites = read(previous_file, "sites", Vector{Index{Int64}})
+        orthogonalize!(mps, 1)
+        sites = siteinds(mps)
     end
-    println("The initial MPS needs to start from right canonical form: $(get_which_canonical_form(mps))\n")
-    flush(stdout)
+    H = get_Hamiltonian(sites, x, l_0, mg)
 
     Ho_mpo_list = get_exp_Ho(sites, -tau/2, x) # odd/2
     Hz_mpo = get_exp_Hz(sites, -tau/2, x, l_0, mg) # 1+aH_z/2
     He_mpo_list = get_exp_He(sites, -tau, x, l_0) # even
     Ho_mpo_list_2 = get_exp_Ho(sites, -tau, x) # odd
 
+    energy_list = Float64[]
+    max_bond_list = Int[]
+    step_num_list = Int[]
     E_previous = real(inner(mps', H, mps))
-    push!(energy_list, (0, E_previous)) # the 0 here is the step number
-    push!(max_bond_list, (0, maxlinkdim(mps)))
+    push!(step_num_list, 0)
+    push!(energy_list, E_previous) # the 0 here is the step number
+    push!(max_bond_list, maxlinkdim(mps))
     E_current = 0
     
     println("The time to get the Hamiltonian, initial MPS, MPO lists and the first E_previous is: $(time() - t)\n")
@@ -108,11 +113,12 @@ function run_iattDMRG()
         if step % measure_every == 0
 
             E_current = real(inner(mps', H, mps))
-            push!(energy_list, (step, E_current))
-            push!(max_bond_list, (step, maxlinkdim(mps)))
+            push!(step_num_list, step)
+            push!(energy_list, E_current)
+            push!(max_bond_list, maxlinkdim(mps))
             write(file, "mps_$(step)", mps)
 
-            println("Step: $step, E = $E_current, Time = $(time()-t)")
+            println("Step: $step, E = $E_current, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)")
             flush(stdout)
             t = time()
             
@@ -120,6 +126,9 @@ function run_iattDMRG()
             if e < tol
                 println("The absolute value of the difference in energy at time step $step was found to be $e which is less than tol = $tol, hence the while loop breaks here.")
                 flush(stdout)
+                write(file, "energy_list", energy_list)
+                write(file, "max_bond_list", max_bond_list)
+                write(file, "step_num_list", step_num_list)
                 break
             end
 
@@ -127,8 +136,13 @@ function run_iattDMRG()
             
         end
 
-        if step == max_steps
-            write(file, "mps_$(step)", mps)
+        if step == max_steps 
+            write(file, "energy_list", energy_list)
+            write(file, "max_bond_list", max_bond_list)
+            write(file, "step_num_list", step_num_list)
+            if step % measure_every != 0
+                write(file, "mps_$(step)", mps)
+            end
         end
 
     end
@@ -136,27 +150,25 @@ function run_iattDMRG()
     println("The absolute value of the difference in energy after $max_steps steps did not reach the desired tol = $tol, hence the function stops here.")
     flush(stdout)
 
-    write(file, "energy_list", energy_list)
-    write(file, "max_bond_list", max_bond_list)
-
 end
 
 function run_attDMRG()
 
     t = time()
-    energy_list = []
-    max_bond_list = []
-    particle_number_list = []
-    entanglement_entropy_list = []
-    z_config_list = []
-    q_config_list = []
-    ef_config_list = []
-    step_num = []
+    energy_list = Float64[]
+    max_bond_list = Int[]
+    particle_number_list = Float64[]
+    entanglement_entropy_list = Float64[]
+    z_config_list = Float64[]
+    q_config_list = Float64[]
+    ef_config_list = Float64[]
+    step_num_list = Int[]
     
     H = get_Hamiltonian(sites, x, l_0, mg)
     PN = get_particle_number_MPO(sites)
     
-    if h5_previous_path[end] != "5" 
+    if h5_previous_path == "None"
+        sites = siteinds("S=1/2", N, conserve_qns = true) 
         println("Initializing with a random MPS\n")
         flush(stdout)
         state = [isodd(n) ? "0" : "1" for n = 1:N]
@@ -168,19 +180,18 @@ function run_attDMRG()
         keys_previous_file = keys(previous_file)
         mps_keys = filter(key -> occursin("mps_", key), keys_previous_file)
         max_mps_key_num = argmax(mps_keys)
-        max_mps_key = "mps_$(max_mps_key_num)"
+        max_mps_key = "$(max_mps_key_num)"
         mps = read(previous_file, max_mps_key, MPS)
-        sites = read(previous_file, "sites", Vector{Index{Int64}})
+        orthogonalize!(mps, 1)
+        sites = siteinds(mps)
     end
-    println("The initial MPS needs to start from right canonical form: $(get_which_canonical_form(mps))\n")
-    flush(stdout)
 
     Ho_mpo_list = get_exp_Ho(sites, -1im*tau/2, x) # odd/2
     Hz_mpo = get_exp_Hz(sites, -1im*tau/2, x, l_0, mg) # 1+aH_z/2
     He_mpo_list = get_exp_He(sites, -1im*tau, x, l_0) # even
     Ho_mpo_list_2 = get_exp_Ho(sites, -1im*tau, x) # odd
 
-    push!(step_num, 0)
+    push!(step_num_list, 0)
     push!(energy_list, real(inner(mps', H, mps)))
     push!(max_bond_list, maxlinkdim(mps))
     push!(particle_number_list, real(inner(mps', PN, mps)))
@@ -218,7 +229,7 @@ function run_attDMRG()
         end
         
         if step % measure_every == 0
-            push!(step_num, step)
+            push!(step_num_list, step)
             push!(energy_list, real(inner(mps', H, mps)))
             push!(max_bond_list, maxlinkdim(mps))
             push!(particle_number_list, real(inner(mps', PN, mps)))
@@ -234,8 +245,8 @@ function run_attDMRG()
             t = time()
         end
 
-        if step == max_steps
-            push!(step_num, step)
+        if (step == max_steps) && (step % measure_every == 0)
+            push!(step_num_list, step)
             push!(energy_list, real(inner(mps', H, mps)))
             push!(max_bond_list, maxlinkdim(mps))
             push!(particle_number_list, real(inner(mps', PN, mps)))
@@ -251,8 +262,12 @@ function run_attDMRG()
 end
 
 if get_dmrg
+    println("DMRG starting now\n")
     get_dmrg_results()
+    println("DMRG is finished, starting iattDMRG now\n")
     run_iattDMRG()
 else
     run_attDMRG() 
 end
+
+close(file)
