@@ -54,7 +54,7 @@ function run_iattDMRG()
         max_mps_key_num = mps_keys[argmax(parse.(Int, [split(item, "_")[2] for item in mps_keys]))]
         max_mps_key = "$(max_mps_key_num)"
         mps = read(previous_file, max_mps_key, MPS)
-        orthogonalize!(mps, 1)
+        orthogonalize!(mps, 1) # put the MPS in right canonical form as it is saved in left canonical form
         sites = siteinds(mps)
     end
     H = get_Hamiltonian(sites, x, l_0, mg)
@@ -84,6 +84,7 @@ function run_iattDMRG()
     write(file, "mps_0", mps)
 
     t = time()
+    no_convergence = true # flag for some print statement after the for loop
     for step in 1:max_steps
     
         if step == 1
@@ -124,6 +125,7 @@ function run_iattDMRG()
             
             e = abs(E_current-E_previous)/N 
             if e < tol
+                no_convergence = false
                 println("The absolute value of the difference in energy at time step $step was found to be $e which is less than tol = $tol, hence the while loop breaks here.")
                 flush(stdout)
                 write(file, "energy_list", energy_list)
@@ -147,8 +149,10 @@ function run_iattDMRG()
 
     end
     
-    println("The absolute value of the difference in energy after $max_steps steps did not reach the desired tol = $tol, hence the function stops here.")
-    flush(stdout)
+    if no_convergence
+        println("The absolute value of the difference in energy after $max_steps steps did not reach the desired tol = $tol, hence the function stops here.")
+        flush(stdout)
+    end
 
 end
 
@@ -182,7 +186,7 @@ function run_attDMRG()
         max_mps_key_num = argmax(mps_keys)
         max_mps_key = "$(max_mps_key_num)"
         mps = read(previous_file, max_mps_key, MPS)
-        orthogonalize!(mps, 1)
+        orthogonalize!(mps, 1) # put the MPS in right canonical form as it is saved in left canonical form
         sites = siteinds(mps)
     end
 
