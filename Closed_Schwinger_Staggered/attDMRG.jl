@@ -119,14 +119,14 @@ function run_iattDMRG()
             push!(max_bond_list, maxlinkdim(mps))
             write(file, "mps_$(step)", mps)
 
-            println("Step: $step, E = $E_current, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)")
+            println("Step: $step, E = $E_current, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)\n")
             flush(stdout)
             t = time()
             
             e = abs(E_current-E_previous)/N 
             if e < tol
                 no_convergence = false
-                println("The absolute value of the difference in energy at time step $step was found to be $e which is less than tol = $tol, hence the while loop breaks here.")
+                println("The absolute value of the difference in energy at time step $step was found to be $e which is less than tol = $tol, hence the while loop breaks here.\n")
                 flush(stdout)
                 write(file, "energy_list", energy_list)
                 write(file, "max_bond_list", max_bond_list)
@@ -150,7 +150,7 @@ function run_iattDMRG()
     end
     
     if no_convergence
-        println("The absolute value of the difference in energy after $max_steps steps did not reach the desired tol = $tol, hence the function stops here.")
+        println("The absolute value of the difference in energy after $max_steps steps did not reach the desired tol = $tol, hence the function stops here.\n")
         flush(stdout)
     end
 

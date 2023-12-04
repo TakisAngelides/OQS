@@ -1,0 +1,21 @@
+1
+
+Testing 
+
+2
+
+Testing
+
+3
+
+Here we want to test
+
+J = -1
+g_z = -0.1
+N = 40
+g_x from 0 to 2, 10 points
+
+4
+
+To test the time step by giving the next smaller time step the solution of the bigger time step at N = 40
+

@@ -28,4 +28,9 @@ Temporary Items
 
 *settings*
 *.vscode*
-*DAGS*
+
+*HDF5*
+*Logs*
+*Plots*
+*.dag*
+*.csv*
