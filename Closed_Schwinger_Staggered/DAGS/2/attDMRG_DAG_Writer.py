@@ -134,6 +134,14 @@ def make_plots():
             df = pd.concat([df, new_row], ignore_index=True)
     
     df.to_csv('results.csv', index = False)
+    
+    # Make plots of energy vs time step size
+    for N in df.N.unique():
+        for x in df.x.unique():
+            for l_0 in df.l_0.unique():
+                for mg in df.mg.unique():
+                    df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.mg == mg)]
+                    
 
     
 # write_dag()
