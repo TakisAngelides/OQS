@@ -69,15 +69,15 @@ def write_dag():
                                         if tau_idx == 0:
                                             h5_previous_path = 'None'
                                         else:
-                                            h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l_0_{l_0}_mg_{mg}.h5'
-                                        h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l_0_{l_0}_mg_{mg}.h5'
+                                            h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l0_{l_0}_mg_{mg}.h5'
+                                        h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l0_{l_0}_mg_{mg}.h5'
                                         
                                         tau_text = str(tau).replace('.', '')
                                         x_text = str(x).replace('.', '')
                                         l_0_text = str(l_0).replace('.', '')
                                         mg_text = str(mg).replace('.', '')
                                         
-                                        job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l_0_{l_0_text}_mg_{mg_text}'
+                                        job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_mg_{mg_text}'
                                         f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
                                         f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" mg="{mg}" max_steps="{max_steps}" project_number="{project_number}" get_dmrg="{get_dmrg}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" path_to_project="{path_to_project}" file_to_run="{file_to_run}"\n')
                                         # f.write('RETRY ' + job_name + ' 3\n')
@@ -85,7 +85,7 @@ def write_dag():
                                         if tau_idx != 0:
                                             
                                             tau_previous_text = str(tau_previous).replace('.', '')
-                                            previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l_0_{l_0_text}_mg_{mg_text}'
+                                            previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_mg_{mg_text}'
                                             f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
 
 def make_plots():
@@ -103,6 +103,7 @@ def make_plots():
         file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
         
         N, tau, x, l_0, mg = filepath.strip().split('_')[1::2]
+        mg = mg.strip().split('.')[0]
         
         imag = False
         if 'dmrg_energy' in file.keys():
