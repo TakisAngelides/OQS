@@ -118,6 +118,7 @@ def make_plots():
         plt.title(f'N = {N}, tau = {tau}, \n x = {x}, l_0 = {l_0}, mg = {mg}')
         if imag:
             plt.hlines(dmrg_energy, 0, max(step_num_list), label = f'dmrg: {dmrg_energy}')
+        plt.legend()
         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_iteration/N_{N}_tau_{tau}_x_{x}_l_0_{l_0}_mg_{mg}.png', bbox_inches = 'tight')
         plt.close()
         
