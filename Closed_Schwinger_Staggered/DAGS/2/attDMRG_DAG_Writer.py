@@ -97,13 +97,23 @@ def make_plots():
         os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_iteration')
     if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/D_vs_iteration'):
         os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/D_vs_iteration')
+    if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_tau'):
+        os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_tau')    
           
     for filepath in os.listdir(f'{path_to_project}/DAGS/{project_number}/HDF5'):
         
         file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
         
-        N, tau, x, l_0, mg = np.array(filepath.strip().split('_')[1::2], dtype = 'float')
+        N, tau, x, l_0, mg = filepath.strip().split('_')[1::2]
+        N = int(N)
+        tau = float(tau)
+        x = float(x)
+        l_0 = float(l_0)
         mg = mg.strip().split('.')[0]
+        
+        energy_list = file['energy_list'][()]
+        max_bond_list = file['max_bond_list'][()]
+        step_num_list = file['step_num_list'][()]
         
         if 'dmrg_energy' in file.keys():
             dmrg_energy = file['dmrg_energy'][()]
@@ -111,10 +121,6 @@ def make_plots():
         else: 
             dmrg_energy = 'None'
             
-        energy_list = file['energy_list'][()]
-        max_bond_list = file['max_bond_list'][()]
-        step_num_list = file['step_num_list'][()]
-        
         plt.plot(step_num_list, energy_list, label = f'min: {min(energy_list)}')
         plt.title(f'N = {N}, tau = {tau}, \n x = {x}, l_0 = {l_0}, mg = {mg}')
         plt.legend()
@@ -145,8 +151,8 @@ def make_plots():
                     for tau in taus:
                         df_tmp1 = df_tmp[df_tmp.tau == tau]
                         min_energy.append(min(df_tmp1.energy))
-                     
-                    dmrg_energy = df_tmp.dmrg_energy[0]
+                    
+                    dmrg_energy = list(df_tmp.dmrg_energy.unique())[0]
                     
                     plt.plot(taus, min_energy, label = f'min: {min(min_energy)}')
                     plt.title(f'N = {N}, x = {x}, \n l_0 = {l_0}, mg = {mg}')
