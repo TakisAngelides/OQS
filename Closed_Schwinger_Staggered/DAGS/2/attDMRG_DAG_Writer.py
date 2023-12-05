@@ -152,6 +152,9 @@ def make_plots():
                         df_tmp1 = df_tmp[df_tmp.tau == tau]
                         min_energy.append(min(df_tmp1.energy))
                     
+                    print('-----------------------------------------------------------')
+                    print(N, x, l_0, mg)
+                    print(df_tmp)
                     dmrg_energy = list(df_tmp.dmrg_energy.unique())[0]
                     
                     plt.plot(taus, min_energy, label = f'min: {min(min_energy)}')
