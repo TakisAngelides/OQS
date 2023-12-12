@@ -43,9 +43,10 @@ function run_iatdDMRG()
     if h5_previous_path == "None" 
         println("Initializing with the identity MPO\n")
         sites = siteinds("S=1/2", N, conserve_qns = true)
-        rho = MPO(sites, "Id") ./ √2
+        rho = MPO(sites, "Id")
+        rho = rho/tr(rho)
     else
-        println("Initializing the MPS from h5_previous_path = $(h5_previous_path)\n")
+        println("Initializing the MPO from h5_previous_path = $(h5_previous_path)\n")
         flush(stdout)
         previous_file = h5open(h5_previous_path, "r")
         keys_previous_file = keys(previous_file)
@@ -53,7 +54,8 @@ function run_iatdDMRG()
         max_rho_key_num = rho_keys[argmax(parse.(Int, [split(item, "_")[2] for item in rho_keys]))]
         max_rho_key = "$(max_rho_key_num)"
         rho = read(previous_file, max_rho_key, MPO)
-        orthogonalize!(rho, 1) # put the MPS in right canonical form as it is saved in left canonical form
+        orthogonalize!(rho, 1) # put the MPO in right canonical form
+        rho = rho/tr(rho)
         sites = siteinds(rho)
     end
 
@@ -72,7 +74,7 @@ function run_iatdDMRG()
     E_previous = inner(rho, H) 
     push!(step_num_list, 0)
     push!(energy_list, E_previous) # the 0 here is the step number
-    push!(max_bond_list, maxlinkdim(mps))
+    push!(max_bond_list, maxlinkdim(rho))
     E_current = 0
     
     println("The time to get the Hamiltonian, initial rho, MPO lists and the first E_previous is: $(time() - t)\n")
@@ -92,24 +94,31 @@ function run_iatdDMRG()
         if step == 1
 
             apply_odd!(odd_gates_4, rho; cutoff = cutoff)
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            rho = rho/tr(rho)
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
             apply_even!(even_gates_2, rho; cutoff = cutoff)
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            rho = rho/tr(rho)
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
             
         elseif step == max_steps
         
             apply_odd!(odd_gates_2, rho; cutoff = cutoff)
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            rho = rho/tr(rho)
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
             apply_even!(even_gates_2, rho; cutoff = cutoff)
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            rho = rho/tr(rho)
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
             apply_odd!(odd_gates_4, rho; cutoff = cutoff)
+            rho = rho/tr(rho)
                 
         else
 
             apply_odd!(odd_gates_2, rho; cutoff = cutoff)
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            rho = rho/tr(rho)
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
             apply_even!(even_gates_2, rho; cutoff = cutoff)
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            rho = rho/tr(rho)
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
 
         end
         
