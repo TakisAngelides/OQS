@@ -164,7 +164,7 @@ if get_dmrg
     println("DMRG is finished, starting iattDMRG now\n")
     run_iatdDMRG()
 else
-    run_atdDMRG() 
+    run_iatdDMRG() 
 end
 
 close(file)
