@@ -1,0 +1,26 @@
+environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULIA_DEPOT_PATH'"
+
+executable = /lustre/fs24/group/cqta/tangelides/julia-1.8.5/bin/julia
+
+arguments = $(path_to_project)/$(file_to_run) $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(mg) $(max_steps) $(project_number) $(get_dmrg) $(h5_path) $(measure_every) $(h5_previous_path)
+
+transfer_input_files = $(path_to_project)/$(file_to_run)
+
+should_transfer_files = IF_NEEDED
+
+# if no units are specified here, MB are considered
+# mem = 10*(4*(2*$(N)*$(D)*$(D)*16*2/1e6)+1000)
+
+# request_memory = $(mem)
+
+# +RequestRuntime = 6.99*24*3600
+
+# max_retries = 5
+
+error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_mg_$(mg)_max_steps_$(max_steps)_get_dmrg_$(get_dmrg).error
+
+output = $(path_to_project)/DAGS/$(project_number)/Logs/Output/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_mg_$(mg)_max_steps_$(max_steps)_get_dmrg_$(get_dmrg).out                    
+
+log = $(path_to_project)/DAGS/$(project_number)/Logs/Log/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_mg_$(mg)_max_steps_$(max_steps)_get_dmrg_$(get_dmrg).log 
+
+queue
