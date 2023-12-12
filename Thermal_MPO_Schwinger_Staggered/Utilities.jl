@@ -80,7 +80,7 @@ function get_Hz(sites, x, l_0, mg)
 
 end
 
-function get_exp_Ho(sites, a, x)::Vector{ITensor}
+function get_exp_Ho_list(sites, a, x)::Vector{ITensor}
 
     """
 
@@ -108,7 +108,7 @@ function get_exp_Ho(sites, a, x)::Vector{ITensor}
 
 end
 
-function get_exp_He(sites, a, x)::Vector{ITensor}
+function get_exp_He_list(sites, a, x)::Vector{ITensor}
 
     """
 
@@ -184,7 +184,7 @@ function get_which_canonical_form(mps)
         end
         res = a*adag
         inds_res = inds(res)
-        res = ITensors.Array(res, inds_res)
+        res = ITensors.Array(res, inds_res...)
         s = size(res)
         if length(s) == 0
             l = 1
@@ -202,7 +202,7 @@ function get_which_canonical_form(mps)
         end
         res = a*adag
         inds_res = inds(res)
-        res = ITensors.Array(res, inds_res)
+        res = ITensors.Array(res, inds_res...)
         s = size(res)
         if length(s) == 0
             l = 1
@@ -229,45 +229,46 @@ function get_which_canonical_form(mps)
 
 end
 
-function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 1e-9)
+function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-9)
 
-    for (idx_num, idx) in enumerate(1:2:N-1)
+    N = length(mpo)
 
-        gate = Ho_mpo_list[idx_num]
-        
-        tmp = noprime!(gate*mps[idx]*mps[idx+1])
+    for (idx, gate) in enumerate(Ho_mpo_list)
 
-        # println("In odd, for idx = $idx, ", get_which_canonical_form(mps))
+        idx = 2*idx-1
+
+        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*gate, 3 => 1)
+
+        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
         
-        U, S, V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
-        
-        mps[idx] = U
+        mpo[idx] = U
 
         S = S/norm(S)
         
-        mps[idx+1] = S*V
+        mpo[idx+1] = S*V
 
         # Extra SVD for ATTDMRG compared to TEBD
         if idx != N-1
         
             idx += 1
         
-            tmp = mps[idx]*mps[idx+1]
+            tmp = mpo[idx]*mpo[idx+1]
         
-            U,S,V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+            U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
         
-            mps[idx] = U
+            mpo[idx] = U
 
             S = S/norm(S)
         
-            mps[idx+1] = S*V
+            mpo[idx+1] = S*V
         
         end
+
     end
 
 end
 
-function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 1e-9)
+function apply_even!(He_mpo_list, mpo; cutoff = 1e-9)
 
     """
     After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
@@ -275,38 +276,37 @@ function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 1e-9)
     """
 
     # mps[1], mps[2] = ITensors.qr(mps[1]*mps[2], uniqueinds(mps[1], mps[2]); positive = true, tags = "Link,l=$(1)")
-    mps[1], S, V = ITensors.svd(mps[1]*mps[2], uniqueinds(mps[1], mps[2]), lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)")
-    mps[2] = S*V
+    mpo[1], S, V = ITensors.svd(mpo[1]*mpo[2], commoninds(mpo[1], mpo[1]*mpo[2])..., lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)")
+    mpo[2] = S*V
 
-    for (idx_num, idx) in enumerate(2:2:N-2)
+    for (idx, gate) in enumerate(He_mpo_list)
 
-        gate = He_mpo_list[idx_num]
-        
-        tmp = noprime!(gate*mps[idx]*mps[idx+1])
+        idx = 2*idx
 
-        # println("In even, for idx = $idx, ", get_which_canonical_form(mps))
+        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*gate, 3 => 1)
+
+        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
         
-        U, S, V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
-        
-        mps[idx] = U
+        mpo[idx] = U
 
         S = S/norm(S)
         
-        mps[idx+1] = S*V
-        
-        # Extra SVD for ATTDMRG compared to TEBD
+        mpo[idx+1] = S*V
 
+        # Extra SVD for ATTDMRG compared to TEBD
+        
         idx += 1
     
-        tmp = noprime!(mps[idx]*mps[idx+1])
+        tmp = mpo[idx]*mpo[idx+1]
     
-        U,S,V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+        U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
     
-        mps[idx] = U
+        mpo[idx] = U
 
         S = S/norm(S)
-        
-        mps[idx+1] = S*V
+    
+        mpo[idx+1] = S*V
+    
     end
 
 end
@@ -406,4 +406,154 @@ function get_particle_number_MPO(sites)
 
     return mpo
 
+end
+
+function get_initial_zero_charge_MPO(sites, state)
+
+    """
+    Prepare the mpo = |state><state| where |state> is a basis state given as a list of integers 1 and 2 e.g. state = [1,1,2,1] which would be the state |0010>
+    """
+
+    N = length(sites)
+    mpo = MPO(sites)
+
+    for i=1:N
+
+        if i == 1 || i == N
+
+            s, sp = inds(mpo[i]; :tags => "Site")
+            l = inds(mpo[i]; :tags => "Link")[1]
+            mpo[i][s => state[i], sp => state[i], l => 1] = 1.0
+
+        else
+
+            s, sp = inds(mpo[i]; :tags => "Site")
+            l1, l2 = inds(mpo[i]; :tags => "Link")
+            mpo[i][s => state[i], sp => state[i], l1 => 1, l2 => 1] = 1.0
+
+        end
+
+    end
+
+    return mpo
+
+end
+
+function get_MPO_site_canonical_form(mpo_site, which_site, mpo_site_index)
+
+    mpo_site_dag = mpo_site'
+    noprime!(mpo_site_dag; :plev => 2)
+    mpo_site_dag = dag(mpo_site_dag'; :tags => "Site")
+    tmp = mpo_site_dag * mpo_site
+
+    # Checking for LCF
+    if which_site == "first"
+
+        tmp_l = tmp * dag(delta(inds(tmp; :tags => "Site")))
+        res = ITensors.Array(tmp_l, inds(tmp_l)...)
+        s = size(res)
+        if length(s) == 0
+            l = 1
+        else
+            l = s[1]
+        end
+        is_left = isapprox(res, I(l))
+
+    elseif which_site == "last"
+
+        tmp_l = tmp * dag(delta(inds(tmp; :tags => "Site")))
+        tmp_l = tmp_l * dag(delta(inds(tmp_l; :tags => "Link")))
+        res = ITensors.Array(tmp_l, inds(tmp_l)...)
+        s = size(res)
+        if length(s) == 0
+            l = 1
+        else
+            l = s[1]
+        end
+        is_left = isapprox(res, I(l))
+        
+    else
+
+        tmp_l = tmp * dag(delta(inds(tmp; :tags => "Site")))
+        tmp_l = tmp_l * dag(delta(inds(tmp_l; :tags => "Link,l=$(mpo_site_index-1)")))
+        res = ITensors.Array(tmp_l, inds(tmp_l)...)
+        s = size(res)
+        if length(s) == 0
+            l = 1
+        else
+            l = s[1]
+        end
+        is_left = isapprox(res, I(l))
+
+    end
+
+    # Checking for RCF
+    if which_site == "first"
+
+        tmp = tmp * dag(delta(inds(tmp; :tags => "Site")))
+        tmp = tmp * dag(delta(inds(tmp; :tags => "Link")))
+        res = ITensors.Array(tmp, inds(tmp)...)
+        s = size(res)
+        if length(s) == 0
+            l = 1
+        else
+            l = s[1]
+        end
+        is_right = isapprox(res, I(l))
+
+    elseif which_site == "last"
+
+        tmp = tmp * dag(delta(inds(tmp; :tags => "Site")))
+        res = ITensors.Array(tmp, inds(tmp)...)
+        s = size(res)
+        if length(s) == 0
+            l = 1
+        else
+            l = s[1]
+        end
+        is_right = isapprox(res, I(l))
+        
+    else
+
+        tmp = tmp * dag(delta(inds(tmp; :tags => "Site")))
+        tmp = tmp * dag(delta(inds(tmp; :tags => "Link,l=$(mpo_site_index)")))
+        res = ITensors.Array(tmp, inds(tmp)...)
+        s = size(res)
+        if length(s) == 0
+            l = 1
+        else
+            l = s[1]
+        end
+        is_right = isapprox(res, I(l))
+
+    end
+
+    if is_left
+        if is_right 
+            return "L/R"
+        else
+            return "L"
+        end
+    elseif is_right
+        return "R"
+    else
+        return "N"
+    end
+
+end
+
+function get_MPO_canonical_form(mpo)
+    
+    res = String[]
+    N = length(mpo)
+    for (mpo_site_index, mpo_site) in enumerate(mpo)
+        if mpo_site_index == 1
+            push!(res, get_MPO_site_canonical_form(mpo_site, "first", mpo_site_index))
+        elseif mpo_site_index == N
+            push!(res, get_MPO_site_canonical_form(mpo_site, "last", mpo_site_index))
+        else
+            push!(res, get_MPO_site_canonical_form(mpo_site, "none", mpo_site_index))
+        end
+    end
+    return res
 end

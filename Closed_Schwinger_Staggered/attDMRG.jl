@@ -61,7 +61,7 @@ function run_iattDMRG()
 
     Ho_mpo_list = get_exp_Ho(sites, -tau/2, x) # odd/2
     Hz_mpo = get_exp_Hz(sites, -tau/2, x, l_0, mg) # 1+aH_z/2
-    He_mpo_list = get_exp_He(sites, -tau, x, l_0) # even
+    He_mpo_list = get_exp_He(sites, -tau, x) # even
     Ho_mpo_list_2 = get_exp_Ho(sites, -tau, x) # odd
 
     energy_list = Float64[]
@@ -192,7 +192,7 @@ function run_attDMRG()
 
     Ho_mpo_list = get_exp_Ho(sites, -1im*tau/2, x) # odd/2
     Hz_mpo = get_exp_Hz(sites, -1im*tau/2, x, l_0, mg) # 1+aH_z/2
-    He_mpo_list = get_exp_He(sites, -1im*tau, x, l_0) # even
+    He_mpo_list = get_exp_He(sites, -1im*tau, x) # even
     Ho_mpo_list_2 = get_exp_Ho(sites, -1im*tau, x) # odd
 
     push!(step_num_list, 0)
