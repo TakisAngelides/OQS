@@ -124,6 +124,7 @@ function run_iatdDMRG()
         
         if step % measure_every == 0
 
+            rho = rho/tr(rho)
             E_current = inner(H, rho) 
             push!(step_num_list, step)
             push!(energy_list, E_current)
