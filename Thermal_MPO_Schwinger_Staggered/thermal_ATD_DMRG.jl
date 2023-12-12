@@ -71,7 +71,7 @@ function run_iatdDMRG()
     energy_list = Float64[]
     max_bond_list = Int[]
     step_num_list = Int[]
-    E_previous = inner(rho, H) 
+    E_previous = inner(H, rho) 
     push!(step_num_list, 0)
     push!(energy_list, E_previous) # the 0 here is the step number
     push!(max_bond_list, maxlinkdim(rho))
