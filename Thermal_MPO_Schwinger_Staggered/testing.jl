@@ -1,5 +1,6 @@
 using ITensors
 using LinearAlgebra
+using HDF5
 include("Utilities.jl")
 
 # --
@@ -203,95 +204,108 @@ include("Utilities.jl")
 
 # -- 
 
-let
+# let
 
-    N = 4
-    tau = 0.01
-    x = 1.0
-    l_0 = 0.2
-    mg = 0.3
-    cutoff = 1e-20
-    max_steps = 1000
+#     N = 4
+#     tau = 0.01
+#     x = 1.0
+#     l_0 = 0.2
+#     mg = 0.3
+#     cutoff = 1e-20
+#     max_steps = 1000
 
-    sites = siteinds("S=1/2", N, conserve_qns = true) 
-    H = get_Hamiltonian(sites, x, l_0, mg)
-    state = [isodd(n) ? "0" : "1" for n = 1:N]
-    psi0 = randomMPS(sites, state, linkdims = 2)
-    obs = DMRGObserver(;energy_tol = tol)
-    nsweeps = max_steps
-    dmrg_energy, dmrg_state = dmrg(H, psi0; nsweeps, cutoff, observer=obs, outputlevel=1)
+#     sites = siteinds("S=1/2", N, conserve_qns = true) 
+#     H = get_Hamiltonian(sites, x, l_0, mg)
+#     state = [isodd(n) ? "0" : "1" for n = 1:N]
+#     psi0 = randomMPS(sites, state, linkdims = 2)
+#     obs = DMRGObserver(;energy_tol = tol)
+#     nsweeps = max_steps
+#     dmrg_energy, dmrg_state = dmrg(H, psi0; nsweeps, cutoff, observer=obs, outputlevel=1)
 
-    sites = siteinds("S=1/2", N, conserve_qns = true)
-    rho = MPO(sites, "Id")
-    orthogonalize!(rho, 1)
-    rho = rho/tr(rho)
+#     sites = siteinds("S=1/2", N, conserve_qns = true)
+#     rho = MPO(sites, "Id")
+#     orthogonalize!(rho, 1)
+#     rho = rho/tr(rho)
 
-    odd_gates_4 = get_exp_Ho_list(sites, -tau/4, x) # odd/4
-    exp_Hz_mpo = get_exp_Hz(sites, -tau/4, x, l_0, mg) # 1+aH_z/4
-    even_gates_2 = get_exp_He_list(sites, -tau/2, x) # even/2
-    odd_gates_2 = get_exp_Ho_list(sites, -tau/2, x) # odd/2
-    H = get_Hamiltonian(sites, x, l_0, mg)
+#     odd_gates_4 = get_exp_Ho_list(sites, -tau/4, x) # odd/4
+#     exp_Hz_mpo = get_exp_Hz(sites, -tau/4, x, l_0, mg) # 1+aH_z/4
+#     even_gates_2 = get_exp_He_list(sites, -tau/2, x) # even/2
+#     odd_gates_2 = get_exp_Ho_list(sites, -tau/2, x) # odd/2
+#     H = get_Hamiltonian(sites, x, l_0, mg)
 
-    for step in 1:max_steps
+#     for step in 1:max_steps
 
-        println("Step is $step")
+#         println("Step is $step")
         
-        if step == 1
+#         if step == 1
 
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            apply_odd!(odd_gates_4, rho; cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            apply_even!(even_gates_2, rho; cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             apply_odd!(odd_gates_4, rho; cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             apply_even!(even_gates_2, rho; cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+#             rho = rho/tr(rho)
             
-        elseif step == max_steps
+#         elseif step == max_steps
         
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            apply_odd!(odd_gates_2, rho; cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            apply_even!(even_gates_2, rho; cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            apply_odd!(odd_gates_4, rho; cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             apply_odd!(odd_gates_2, rho; cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             apply_even!(even_gates_2, rho; cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             apply_odd!(odd_gates_4, rho; cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
                 
-        else
+#         else
 
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            apply_odd!(odd_gates_2, rho; cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            apply_even!(even_gates_2, rho; cutoff = cutoff)
-            rho = rho/tr(rho)
-            println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
-            rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             apply_odd!(odd_gates_2, rho; cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             apply_even!(even_gates_2, rho; cutoff = cutoff)
+#             rho = rho/tr(rho)
+#             println(get_MPO_canonical_form(rho), " ", linkdims(rho), " ", inner(H, rho))
+#             rho = apply(apply(exp_Hz_mpo, rho), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+#             rho = rho/tr(rho)
 
-        end
+#         end
 
-    end
+#     end
 
-    # println(inds(rho))
-    println(dmrg_energy)
+#     # println(inds(rho))
+#     println(dmrg_energy)
 
-end
+# end
+
+# -- 
+
+f = h5open("test.h5", "w")
+sites = siteinds("S=1/2", 4)
+println(typeof(sites))
+mpo = randomMPO(sites)
+write(f, "mpo", mpo)
+close(f)
+f = h5open("test.h5", "r")
+mpo_read = read(f, "mpo", MPO)
+sites_read = siteinds(mpo_read)
+println(typeof(sites_read))
 
 # -- 
