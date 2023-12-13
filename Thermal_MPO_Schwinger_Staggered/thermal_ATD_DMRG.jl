@@ -20,11 +20,11 @@ file = h5open(h5_path, "w")
 
 function get_dmrg_results()
 
-    sites = siteinds("S=1/2", N, conserve_qns = true) 
-    write(file, "sites_dmrg", sites)
+    sites = siteinds("S=1/2", N) # , conserve_qns = true) 
     H = get_Hamiltonian(sites, x, l_0, mg)
-    state = [isodd(n) ? "0" : "1" for n = 1:N]
-    psi0 = randomMPS(sites, state, linkdims = 2)
+    # state = [isodd(n) ? "0" : "1" for n = 1:N]
+    # psi0 = randomMPS(sites, state, linkdims = 2)
+    psi0 = randomMPS(sites, linkdims = 2)
     obs = DMRGObserver(;energy_tol = tol)
     nsweeps = max_steps
 
@@ -56,7 +56,7 @@ function run_iatdDMRG()
         rho = read(previous_file, max_rho_key, MPO)
         orthogonalize!(rho, 1) # put the MPO in right canonical form
         rho = rho/tr(rho)
-        sites = siteinds(rho)
+        sites = reduce(vcat, siteinds(rho; :plev => 0))
     end
 
     # Get the Hamiltonian MPO
