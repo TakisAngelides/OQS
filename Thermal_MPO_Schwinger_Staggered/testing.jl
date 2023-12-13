@@ -297,15 +297,17 @@ include("Utilities.jl")
 
 # -- 
 
-f = h5open("test.h5", "w")
-sites = siteinds("S=1/2", 4)
-println(typeof(sites))
-mpo = randomMPO(sites)
-write(f, "mpo", mpo)
-close(f)
-f = h5open("test.h5", "r")
-mpo_read = read(f, "mpo", MPO)
-sites_read = siteinds(mpo_read)
-println(typeof(sites_read))
+# f = h5open("test1.h5", "w")
+# sites = siteinds("S=1/2", 4)
+# println(sites)
+# mpo = randomMPO(sites)
+# write(f, "mpo", mpo)
+# close(f)
+# f = h5open("test1.h5", "r")
+# mpo_read = read(f, "mpo", MPO)
+# sites_read = siteinds(mpo_read; :plev => 0)
+# println("----------")
+# println(reduce(vcat, siteinds(mpo_read; :plev => 0)))
+# close(f)
 
 # -- 
