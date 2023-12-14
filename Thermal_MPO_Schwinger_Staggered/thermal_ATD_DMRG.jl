@@ -56,7 +56,7 @@ function run_iatdDMRG()
         rho = read(previous_file, max_rho_key, MPO)
         orthogonalize!(rho, 1) # put the MPO in right canonical form
         rho = rho/tr(rho)
-        sites = reduce(vcat, siteinds(rho; :plev => 0))
+        sites = dag(reduce(vcat, siteinds(rho; :plev => 0)))
     end
 
     # Get the Hamiltonian MPO
