@@ -277,6 +277,7 @@ function apply_even!(He_mpo_list, mpo; cutoff = 1e-9)
 
     # mps[1], mps[2] = ITensors.qr(mps[1]*mps[2], uniqueinds(mps[1], mps[2]); positive = true, tags = "Link,l=$(1)")
     mpo[1], S, V = ITensors.svd(mpo[1]*mpo[2], commoninds(mpo[1], mpo[1]*mpo[2])..., lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)")
+    S = S/norm(S)
     mpo[2] = S*V
 
     for (idx, gate) in enumerate(He_mpo_list)
