@@ -21,7 +21,7 @@ mg_list = [0.1, 1.2]
 get_dmrg = 'true'
 max_steps_list = [50000] 
 measure_every_list = list(np.array(max_steps_list)//1000)
-project_number = 1 # <======================== Important to change according to which project file ================================
+project_number = 1 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
 
@@ -91,8 +91,8 @@ def write_dag():
 
 def make_plots():
     
-    # columns = ['N', 'x', 'mg', 'l_0', 'tau', 'step', 'energy', 'D', 'dmrg_energy']
-    # df = pd.DataFrame(columns = columns)
+    columns = ['N', 'x', 'mg', 'l_0', 'tau', 'step', 'energy', 'D', 'dmrg_energy']
+    df = pd.DataFrame(columns = columns)
     
     if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_iteration'):
         os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_iteration')
@@ -108,7 +108,7 @@ def make_plots():
         file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
         
         row = filepath.strip().split('_')
-        N, tau, x, l_0, mg = row[1], row[3], row[5], row[8], row[10]
+        N, tau, x, l_0, mg = row[1], row[3], row[5], row[7], row[9]
         N = int(N)
         tau = float(tau)
         x = float(x)
@@ -140,13 +140,13 @@ def make_plots():
         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/D_vs_iteration/N_{N}_tau_{tau}_x_{x}_l_0_{l_0}_mg_{mg}.png', bbox_inches = 'tight')
         plt.close()
               
-        # for i in range(len(step_num_list)):
+        for i in range(len(step_num_list)):
             
-        #     step, energy, D = step_num_list[i], energy_list[i], max_bond_list[i]
-        #     new_row = pd.DataFrame([[N, x, mg, l_0, tau, step, energy, D, dmrg_energy]], columns = df.columns)
-        #     df = pd.concat([df, new_row], ignore_index=True)
+            step, energy, D = step_num_list[i], energy_list[i], max_bond_list[i]
+            new_row = pd.DataFrame([[N, x, mg, l_0, tau, step, energy, D, dmrg_energy]], columns = df.columns)
+            df = pd.concat([df, new_row], ignore_index=True)
     
-    # df.to_csv('results.csv', index = False)
+    df.to_csv('results.csv', index = False)
     
     df = pd.read_csv('results.csv')
     
@@ -186,5 +186,5 @@ def make_plots():
                         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_diff_vs_tau/N_{N}_x_{x}_l_0_{l_0}_mg_{mg}.png', bbox_inches = 'tight')
                         plt.close()
                                         
-write_dag()
-# make_plots()
+# write_dag()
+make_plots()
