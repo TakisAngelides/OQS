@@ -121,6 +121,8 @@ function run_iatdDMRG()
             rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
 
         end
+
+        rho = (dag(swapprime(rho, 0, 1)) + rho)/2 # fix hermiticity
         
         if step % measure_every == 0
 
