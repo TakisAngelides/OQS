@@ -558,3 +558,29 @@ function get_MPO_canonical_form(mpo)
     end
     return res
 end
+
+function ishermitian(mpo; tol = 1e-14)
+
+    return norm(mpo - dag(swapprime(mpo, 0, 1))) < tol
+
+end
+
+function ispositive(mpo; tol = 1e-14)
+
+    """
+    We check this by using DMRG to find the ground state energy of the "density matrix" MPO
+    """
+
+    n = length(mpo)
+    dmrg_tol = tol
+    cutoff = tol
+    sites = dag(reduce(vcat, siteinds(mpo; :plev => 0)))
+    state = [isodd(i) ? "0" : "1" for i = 1:n]
+    psi0 = randomMPS(sites, state)
+    obs = DMRGObserver(;energy_tol = dmrg_tol)
+    nsweeps = 100
+    dmrg_energy, _ = dmrg(mpo, psi0; nsweeps, cutoff, observer=obs, outputlevel=1)
+
+    return abs(dmrg_energy) < tol
+
+end
