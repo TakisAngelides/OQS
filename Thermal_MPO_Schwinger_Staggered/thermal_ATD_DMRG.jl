@@ -4,17 +4,17 @@ using HDF5
 include("Utilities.jl")
 
 N = parse(Int, ARGS[1])
-tau = parse(Float64, ARGS[2])
-cutoff = parse(Float64, ARGS[3])
-tol = parse(Float64, ARGS[4])
+tau = parse(Float64, ARGS[2]) # time step in time evolution rho -> exp(-tau H) after one step
+cutoff = parse(Float64, ARGS[3]) # cutoff for SVD
+tol = parse(Float64, ARGS[4]) # tolerance for DMRG convergence and ATDDMRG convergence
 x = parse(Float64, ARGS[5])
 l_0 = parse(Float64, ARGS[6])
 mg = parse(Float64, ARGS[7])
-max_steps = parse(Int, ARGS[8])
+max_steps = parse(Int, ARGS[8]) # another stopping condition for DMRG and ATDDMRG
 project_number = parse(Int, ARGS[9])
 get_dmrg = parse(Bool, ARGS[10])
 h5_path = ARGS[11]
-measure_every = parse(Int, ARGS[12])
+measure_every = parse(Int, ARGS[12]) # this determines how often to save rho and measure the energy in ATDDMRG
 h5_previous_path = ARGS[13]
 file = h5open(h5_path, "w")
 
@@ -62,7 +62,9 @@ function run_iatdDMRG()
     # Get the Hamiltonian MPO
     H = get_Hamiltonian(sites, x, l_0, mg)
 
-    # Get the exponential of the Hamiltonian terms for evolution
+    # Get the exponential of the Hamiltonian terms for evolution 
+    # remember we will apply rho(beta) exp(-beta H) as exp(-beta/2 H) I exp(-beta/2 H) and then the trotterization has beta/2/2 on Hz, Ho and beta/2 on He
+    # but we also want to take rho(beta) = rho(beta/2)^dagger * rho(beta/2) to fix posivity
     odd_gates_4 = get_exp_Ho_list(sites, -tau/4, x) # odd/4
     exp_Hz_mpo = get_exp_Hz(sites, -tau/4, x, l_0, mg) # 1+aH_z/4
     even_gates_2 = get_exp_He_list(sites, -tau/2, x) # even/2
@@ -94,39 +96,69 @@ function run_iatdDMRG()
         if step == 1
 
             apply_odd!(odd_gates_4, rho; cutoff = cutoff)
+            
             rho = rho/tr(rho)
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
+            
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            
+            rho = rho/tr(rho)
+            
             apply_even!(even_gates_2, rho; cutoff = cutoff)
+            
             rho = rho/tr(rho)
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
+            
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            
+            rho = rho/tr(rho)
             
         elseif step == max_steps
         
             apply_odd!(odd_gates_2, rho; cutoff = cutoff)
+            
             rho = rho/tr(rho)
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
+            
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            
+            rho = rho/tr(rho)
+            
             apply_even!(even_gates_2, rho; cutoff = cutoff)
+            
             rho = rho/tr(rho)
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
+            
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            
+            rho = rho/tr(rho)
+            
             apply_odd!(odd_gates_4, rho; cutoff = cutoff)
+            
             rho = rho/tr(rho)
                 
         else
 
             apply_odd!(odd_gates_2, rho; cutoff = cutoff)
+            
             rho = rho/tr(rho)
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
+            
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            
+            rho = rho/tr(rho)
+            
             apply_even!(even_gates_2, rho; cutoff = cutoff)
+            
             rho = rho/tr(rho)
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff, normalize = true), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff, normalize = true)
+            
+            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
+            
+            rho = rho/tr(rho)
 
         end
 
-        rho = (dag(swapprime(rho, 0, 1)) + rho)/2 # fix hermiticity
+        rho = add(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff)/2 # fix hermiticity with rho -> rho dagger + rho over 2
+        rho = apply(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff) # fix positivity with rho beta = rho beta over 2 dagger times rho beta over 2 - this results in a right canonical form MPO
+        rho = rho/tr(rho)
         
         if step % measure_every == 0
 
-            rho = rho/tr(rho)
             E_current = inner(H, rho) 
             push!(step_num_list, step)
             push!(energy_list, E_current)

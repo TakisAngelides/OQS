@@ -584,3 +584,14 @@ function ispositive(mpo; tol = 1e-14)
     return abs(dmrg_energy) < tol
 
 end
+
+function mpo_to_matrix(mpo)
+
+    n = length(mpo)
+    a = contract(mpo)
+    a = Array(a, inds(a; :plev => 1)..., inds(a; :plev => 0)...)
+    a = reshape(a, 2^n, 2^n)
+
+    return a
+
+end
