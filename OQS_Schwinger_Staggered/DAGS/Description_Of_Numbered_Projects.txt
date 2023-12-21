@@ -1,0 +1,13 @@
+1
+
+Testing the overall algorithm with different parameters
+
+2 
+
+Testing the new way of evolving which takes care of positivity and hermiticity
+
+3
+
+Same as 2 with N = 20 from N = 4
+
+Not all jobs finished because the results were ok from the jobs that did so I stopped the running.
