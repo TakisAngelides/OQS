@@ -136,7 +136,11 @@ function get_exp_He_list(sites, a, x)::Vector{ITensor}
 
 end
 
-function get_Hamiltonian(sites, x, l_0, mg)
+function get_W_Hamiltonian(sites, x, l_0, mg)
+
+    """
+    This gives W = 2*H/(ag^2)
+    """
 
     N = length(sites)
 
@@ -162,6 +166,43 @@ function get_Hamiltonian(sites, x, l_0, mg)
     opsum += (mg*sqrt(x)*(-1)^(N-1)),"Z",N
 
     opsum += ((l_0^2)*(N-1) + (l_0*N/2) + (N^2)/8),"Id",1
+
+    return MPO(opsum, sites)
+
+end
+
+function get_aH_Hamiltonian(sites, x, l_0, ma)
+
+    """
+    This gives aH Hamiltonian
+    """
+
+    N = length(sites)
+
+    opsum = OpSum()
+
+    for n in 1:N-1
+        
+        for m in n+1:N
+            
+            # Long range ZZ interaction term
+            opsum += 0.25*(1/x)*(N-m),"Z",n,"Z",m
+
+        end
+
+        # Kinetic term
+        opsum += 0.5,"S+",n,"S-",n+1
+        opsum += 0.5,"S-",n,"S+",n+1
+
+        opsum += (1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n
+        
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n
+
+    end
+
+    opsum += (0.5*ma*(-1)^(N-1)),"Z",N
+
+    opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1
 
     return MPO(opsum, sites)
 
@@ -593,5 +634,132 @@ function mpo_to_matrix(mpo)
     a = reshape(a, 2^n, 2^n)
 
     return a
+
+end
+
+function get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
+
+    """
+
+    This gives aH as a sparse Hamiltonian and here we will also add the penalty term
+
+    """
+
+    eye(n::Int64) = sparse(I, n, n);
+
+    H = spzeros(2^(N), 2^(N))
+    X = sparse(Float64[0 1; 1 0])
+    Y = sparse(ComplexF64[0 -1im; 1im 0])
+    Z = sparse(Float64[1 0; 0 -1])
+
+    # Kinetic term
+    for n=1:N-1
+        H += (1/4)*kron(eye(2^(n-1)), kron(X, kron(X, eye(2^(N-(n+1))))))
+        H += (1/4)*kron(eye(2^(n-1)), kron(Y, kron(Y, eye(2^(N-(n+1))))))
+    end
+
+    # Long range ZZ interaction term
+    for n = 1:N-1
+        for m = n+1:N
+            H += (1/x)*(1/4)*(N - m + lambda)*kron(eye(2^(n-1)), kron(Z, kron(eye(2^(m-n-1)), kron(Z, eye(2^(N-m))))))
+        end
+    end
+
+    # Mass term
+    for n=1:N
+        H += (ma/2)*((-1)^(n-1))*kron(eye(2^(n-1)), kron(Z, eye(2^(N-n))))
+    end
+
+    # Electric single Z term
+    for n=1:N-1
+        H += ((1/x)*(N/8 - (1/4)*ceil((n-1)/2) + l_0*(N-n)/2))*kron(eye(2^(n-1)), kron(Z, eye(2^(N-n))))
+    end
+
+    # Constant term
+    H += (l_0^2*(N-1)/(2*x) + l_0*N/(4*x) + (N^2)/(16*x) + lambda*N/(8*x))*eye(2^N)
+
+    return H
+
+end
+
+function environment_correlator(type, n, m, aD_0, sigma_over_a)
+
+    if type == "constant"
+        return aD_0
+    elseif type == "delta"
+        if n == m
+            return aD_0
+        else
+            return 0.0
+        end
+    else # gaussian case
+        return exp(-0.5*(1/sigma_over_a)^2*(n-m)^2)
+    end
+
+end
+
+function get_Lindblad_jump_operator_sparse_matrix(m, aT)
+
+    eye(n::Int64) = sparse(I, n, n);
+    X = sparse(Float64[0 1; 1 0])
+    Y = sparse(ComplexF64[0 -1im; 1im 0])
+    Z = sparse(Float64[1 0; 0 -1])
+
+    res = spzeros(2^(N), 2^(N))        
+            
+    res += 0.5*((-1)^m)*kron(eye(2^(m-1)), kron(Z, eye(2^(N-m))))
+    res += 0.5*((-1)^m)*eye(2^N)
+    
+    if m != 1
+        res += (1im*(-1)^m/(16*aT))*kron(eye(2^(m-2)), kron(X, kron(Y, eye(2^(N-m)))))
+        res += (-1im*(-1)^m/(16*aT))*kron(eye(2^(m-2)), kron(Y, kron(X, eye(2^(N-m)))))
+    end
+    
+    if m != N
+        res += (-1im*(-1)^m/(16*aT))*kron(eye(2^(m-1)), kron(X, kron(Y, eye(2^(N-m-1)))))
+        res += (1im*(-1)^m/(16*aT))*kron(eye(2^(m-1)), kron(Y, kron(X, eye(2^(N-m-1)))))
+    end
+
+    return res
+
+end
+
+function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+
+    """
+
+    This gets the Lindblad operator as a sparse matrix in the purified version
+    see eg eq 15 16 in Numerical evaluation of two-time correlation functions
+    in open quantum systems with matrix product state methods:
+    a comparison - kollath et al
+
+    """
+
+    L = spzeros(2^(2*N), 2^(2*N))
+
+    eye(n::Int64) = sparse(I, n, n);
+    X = sparse(Float64[0 1; 1 0])
+    Y = sparse(ComplexF64[0 -1im; 1im 0])
+    Z = sparse(Float64[1 0; 0 -1])
+
+    H = get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
+
+    # Unitary part of Lindbladian
+    L += -1im * kron(H, eye(2^N)) + 1im * kron(eye(2^N), H) 
+
+    for n in 1:N
+        for m in 1:N
+
+            tmp1 = get_Lindblad_jump_operator_sparse_matrix(n, aT)
+            tmp2 = get_Lindblad_jump_operator_sparse_matrix(m, aT)
+
+            tmp3 = conj.(tmp1) * tmp2
+
+            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (kron((tmp1), (tmp2')) - 0.5*kron((tmp3), eye(2^N)) -0.5*kron(eye(2^N), (tmp3')))
+
+        end
+    end
+
+    return L
 
 end
