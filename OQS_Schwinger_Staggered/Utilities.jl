@@ -698,7 +698,7 @@ function environment_correlator(type, n, m, aD_0, sigma_over_a)
 
 end
 
-function get_Lindblad_jump_operator_sparse_matrix(m, aT)
+function get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
 
     eye(n::Int64) = sparse(I, n, n);
     X = sparse(Float64[0 1; 1 0])
@@ -750,8 +750,8 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
     for n in 1:N
         for m in 1:N
 
-            tmp1 = get_Lindblad_jump_operator_sparse_matrix(n, aT)
-            tmp2 = get_Lindblad_jump_operator_sparse_matrix(m, aT)
+            tmp1 = get_Lindblad_jump_operator_sparse_matrix(N, n, aT)
+            tmp2 = get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
 
             tmp3 = conj.(tmp1) * tmp2
 
