@@ -772,7 +772,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
             tmp1 = get_Lindblad_jump_operator_sparse_matrix(N, n, aT)
             tmp2 = get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
 
-            tmp3 = tmp1' * tmp2
+            tmp3 = tmp1' * tmp2 # the dash is the dagger
 
             L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (kron(tmp1, transpose(tmp2')) - 0.5*kron(tmp3, eye(2^N)) -0.5*kron(eye(2^N), transpose(tmp3)))
 
