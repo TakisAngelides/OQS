@@ -146,20 +146,20 @@ function get_Hamiltonian(sites, x, l_0, mg)
         
         for k in n+1:N
             
-            opsum += 4*0.5*(N-k),"Sz",n,"Sz",k
+            opsum += 0.5*(N-k),"Z",n,"Z",k
 
         end
 
         opsum += x,"S+",n,"S-",n+1
         opsum += x,"S-",n,"S+",n+1
 
-        opsum += 2*(N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Sz",n
+        opsum += (N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Z",n
         
-        opsum += 2*(mg*sqrt(x)*(-1)^(n-1)),"Sz",n
+        opsum += (mg*sqrt(x)*(-1)^(n-1)),"Z",n
 
     end
 
-    opsum += 2*(mg*sqrt(x)*(-1)^(N-1)),"Sz",N
+    opsum += (mg*sqrt(x)*(-1)^(N-1)),"Z",N
 
     opsum += ((l_0^2)*(N-1) + (l_0*N/2) + (N^2)/8),"Id",1
 

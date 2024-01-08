@@ -2,9 +2,9 @@ environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULI
 
 executable = /lustre/fs24/group/cqta/tangelides/julia-1.8.5/bin/julia
 
-arguments = /lustre/fs24/group/cqta/tangelides/OQS/Thermal_MPO_Schwinger_Staggered/thermal_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(mg) $(max_steps) $(project_number) $(get_dmrg) $(h5_path) $(measure_every) $(h5_previous_path)
+arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(mg) $(max_steps) $(project_number) $(get_dmrg) $(h5_path) $(measure_every) $(h5_previous_path)
 
-transfer_input_files = /lustre/fs24/group/cqta/tangelides/OQS/Thermal_MPO_Schwinger_Staggered/thermal_ATD_DMRG.jl
+transfer_input_files = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl
 
 should_transfer_files = IF_NEEDED
 

@@ -4,11 +4,11 @@ import h5py
 import matplotlib.pyplot as plt
 import pandas as pd
 
-sub_file_name = 'thermal_ATD_DMRG.sub'
+sub_file_name = 'OQS_ATD_DMRG.sub'
 path_to_repo = '/lustre/fs24/group/cqta/tangelides/OQS'
-path_to_project = f'{path_to_repo}/Thermal_MPO_Schwinger_Staggered'
-file_to_run = 'thermal_ATD_DMRG.jl'
-name_of_dag = 'thermal_ATD_DMRG'
+path_to_project = f'{path_to_repo}/OQS_Schwinger_Staggered'
+file_to_run = 'OQS_ATD_DMRG.jl'
+name_of_dag = 'OQS_ATD_DMRG'
 
 N_list = [20]
 tau_list = [10**(-pow) for pow in [3, 4, 5, 6]] 
@@ -21,7 +21,7 @@ mg_list = [0.1, 1.2]
 get_dmrg = 'true'
 max_steps_list = [20000] 
 measure_every_list = [1] # list(np.array(max_steps_list)//1000)
-project_number = 3 # <==================================== Important to change according to which project file ================================
+project_number = 1 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
 
@@ -190,5 +190,5 @@ def make_plots():
                         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_diff_vs_tau/N_{N}_x_{x}_l_0_{l_0}_mg_{mg}.png', bbox_inches = 'tight')
                         plt.close()
                                         
-# write_dag()
-make_plots()
+write_dag()
+# make_plots()
