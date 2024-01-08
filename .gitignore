@@ -40,3 +40,9 @@ testing.jl
 testing.py
 
 *.png
+testing.sub
+*.txt
+
+*.out
+*.error
+*.log

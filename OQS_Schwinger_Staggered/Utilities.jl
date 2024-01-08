@@ -724,6 +724,25 @@ function get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
 
 end
 
+function get_kinetic_part_aH_Hamiltonian_sparse_matrix(N)
+    
+    eye(n::Int64) = sparse(I, n, n);
+
+    Hk = spzeros(2^(N), 2^(N))
+    X = sparse(Float64[0 1; 1 0])
+    Y = sparse(ComplexF64[0 -1im; 1im 0])
+    Z = sparse(Float64[1 0; 0 -1])
+
+    # Kinetic term
+    for n=1:N-1
+        Hk += (1/4)*kron(eye(2^(n-1)), kron(X, kron(X, eye(2^(N-(n+1))))))
+        Hk += (1/4)*kron(eye(2^(n-1)), kron(Y, kron(Y, eye(2^(N-(n+1))))))
+    end
+
+    return Hk
+
+end
+
 function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
 
     """
@@ -753,9 +772,9 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
             tmp1 = get_Lindblad_jump_operator_sparse_matrix(N, n, aT)
             tmp2 = get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
 
-            tmp3 = conj.(tmp1) * tmp2
+            tmp3 = tmp1' * tmp2
 
-            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (kron((tmp1), (tmp2')) - 0.5*kron((tmp3), eye(2^N)) -0.5*kron(eye(2^N), (tmp3')))
+            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (kron(tmp1, transpose(tmp2')) - 0.5*kron(tmp3, eye(2^N)) -0.5*kron(eye(2^N), transpose(tmp3)))
 
         end
     end
