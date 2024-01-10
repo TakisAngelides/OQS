@@ -700,6 +700,10 @@ end
 
 function get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
 
+    """
+    This is getting a*L_m where L_m is the jump operator at site m
+    """
+
     eye(n::Int64) = sparse(I, n, n);
     X = sparse(Float64[0 1; 1 0])
     Y = sparse(ComplexF64[0 -1im; 1im 0])
@@ -743,6 +747,64 @@ function get_kinetic_part_aH_Hamiltonian_sparse_matrix(N)
 
 end
 
+function operator_sparse_matrix(operators, positions, N)
+    
+    # Create an identity matrix of size N x N
+    result = sparse(I, N, N)
+    
+    # Apply operators at specified positions
+    for i in 1:length(operators)
+
+        op = operators[i]
+        pos = positions[i]
+        
+        # Generate the operator matrix based on the position and operator
+        op_matrix = (op == "X") ? [0 1; 1 0] :
+                    (op == "Y") ? [0 -im; im 0] :
+                    (op == "Z") ? [1 0; 0 -1] :
+                    throw(ArgumentError("Invalid operator $op"))
+        
+        # Apply the operator matrix to the result at the specified position
+        start_idx = pos
+        end_idx = pos + size(op_matrix, 1) - 1
+        result[start_idx:end_idx, start_idx:end_idx] = op_matrix * result[start_idx:end_idx, start_idx:end_idx]
+
+    end
+    
+    return result
+    
+end
+
+function get_LdagL_sparse_matrix(N, n, m, aT)
+
+    """
+    This is returning a^2 * L^\dagger_n L_m
+    """
+
+    eye(n::Int64) = sparse(I, n, n);
+
+    res = spzeros(2^(N), 2^(N))
+    X = sparse(Float64[0 1; 1 0])
+    Y = sparse(ComplexF64[0 -1im; 1im 0])
+    Z = sparse(Float64[1 0; 0 -1])
+
+    res += 0.25*(-1)^(n+m) * kron(eye(2^(n-1)), kron(Z, kron(eye(2^(m-n-1)), kron(Z, eye(2^(N-m)))))) # Z_n Z_m
+    res += 0.5*(-1)^(n+m) * kron(eye(2^(n-1)), kron(Z, eye(2^(N-n)))) # Z_n
+    res += 0.25*(-1)^(n+m) * eye(2^N)
+
+    if n != 1
+        res += (-1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-2)), kron(X, kron(Y, eye(2^(N-n))))) # X_n-1 Y_n 
+        res += (1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-2)), kron(Y, kron(X, eye(2^(N-n))))) # Y_n-1 X_n
+    end
+    
+    if n != N
+        res += (1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-1)), kron(X, kron(Y, eye(2^(N-n-1))))) # X_n Y_n+1
+        res += (-1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-1)), kron(Y, kron(X, eye(2^(N-n-1))))) # Y_n X_n+1
+    end
+    
+
+end
+
 function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
 
     """
@@ -774,7 +836,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
 
             tmp3 = tmp1' * tmp2 # the dash is the dagger
 
-            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (kron(tmp1, transpose(tmp2')) - 0.5*kron(tmp3, eye(2^N)) -0.5*kron(eye(2^N), transpose(tmp3)))
+            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (kron(tmp2, transpose(tmp1')) - 0.5*kron(tmp3, eye(2^N)) -0.5*kron(eye(2^N), transpose(tmp3)))
 
         end
     end
