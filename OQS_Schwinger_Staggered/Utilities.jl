@@ -747,61 +747,151 @@ function get_kinetic_part_aH_Hamiltonian_sparse_matrix(N)
 
 end
 
-function operator_sparse_matrix(operators, positions, N)
-    
-    # Create an identity matrix of size N x N
-    result = sparse(I, N, N)
-    
-    # Apply operators at specified positions
-    for i in 1:length(operators)
+function get_op(ops, positions, N)
 
-        op = operators[i]
-        pos = positions[i]
+    op_dict = Dict("X" => [0 1; 1 0], "Y" => [0 -1im; 1im 0], "Z" => [1 0; 0 -1])
+    zipped = sort(zip(1:length(ops), positions, ops), by = x -> x[2])
+    old_positions = [element[2] for element in zipped] 
+    old_ops = [element[3] for element in zipped]
+
+    positions = []
+    ops = []
+
+    if length(Set(old_positions)) != length(old_positions) # case where we have duplicate positions
         
-        # Generate the operator matrix based on the position and operator
-        op_matrix = (op == "X") ? [0 1; 1 0] :
-                    (op == "Y") ? [0 -im; im 0] :
-                    (op == "Z") ? [1 0; 0 -1] :
-                    throw(ArgumentError("Invalid operator $op"))
+        flag = false
+
+        for (idx, pos) in enumerate(old_positions)
+
+            if flag
+
+                flag = false
+                continue
+
+            end
+
+            if idx != length(old_positions)
+
+                if pos != old_positions[idx+1]
+
+                    push!(positions, pos)
+                    push!(ops, op_dict[old_ops[idx]])
+
+                else
+
+                    push!(positions, pos)
+                    push!(ops, op_dict[old_ops[idx]]*op_dict[old_ops[idx+1]])
+                    flag = true
+
+                end
+
+            else
+
+                push!(positions, pos)
+                push!(ops, op_dict[old_ops[idx]])
+
+            end
+
+        end
+
+    else
+
+        for (idx, pos) in enumerate(old_positions)
+
+            push!(positions, pos)
+            push!(ops, op_dict[old_ops[idx]])
         
-        # Apply the operator matrix to the result at the specified position
-        start_idx = pos
-        end_idx = pos + size(op_matrix, 1) - 1
-        result[start_idx:end_idx, start_idx:end_idx] = op_matrix * result[start_idx:end_idx, start_idx:end_idx]
+        end
 
     end
+
+    eye(n) = sparse(I, n, n)
+
+    res = eye(1)
+
+    for (i, pos) in enumerate(positions)
+
+        if i == 1
+            how_many_I_before = pos-1
+        else
+            how_many_I_before = pos - positions[i-1] - 1
+        end
+
+        pos = positions[i]
+        op = ops[i]
     
-    return result
-    
+        res = kron(res, eye(2^how_many_I_before))
+        res = kron(res, op)
+
+    end
+
+    res = kron(res, eye(2^(N - positions[end])))
+
+    return res
+
 end
 
 function get_LdagL_sparse_matrix(N, n, m, aT)
 
-    """
-    This is returning a^2 * L^\dagger_n L_m
-    """
-
+    # This is returning a^2 * L^\dagger_n L_m
+    
     eye(n::Int64) = sparse(I, n, n);
 
     res = spzeros(2^(N), 2^(N))
-    X = sparse(Float64[0 1; 1 0])
-    Y = sparse(ComplexF64[0 -1im; 1im 0])
-    Z = sparse(Float64[1 0; 0 -1])
 
-    res += 0.25*(-1)^(n+m) * kron(eye(2^(n-1)), kron(Z, kron(eye(2^(m-n-1)), kron(Z, eye(2^(N-m)))))) # Z_n Z_m
-    res += 0.5*(-1)^(n+m) * kron(eye(2^(n-1)), kron(Z, eye(2^(N-n)))) # Z_n
+    res += 0.25*(-1)^(n+m) * get_op(["Z", "Z"], [n, m], N) 
+    res += 0.5*(-1)^(n+m) * get_op(["Z"], [n], N) 
     res += 0.25*(-1)^(n+m) * eye(2^N)
 
-    if n != 1
-        res += (-1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-2)), kron(X, kron(Y, eye(2^(N-n))))) # X_n-1 Y_n 
-        res += (1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-2)), kron(Y, kron(X, eye(2^(N-n))))) # Y_n-1 X_n
+    if (n != 1)
+        res += (-1im*(-1)^(n + m)/(32*aT)) * get_op(["X", "Y", "Z"], [n-1, n, m], N) 
+        res += (1im*(-1)^(n + m)/(32*aT)) * get_op(["Y", "X", "Z"], [n-1, n, m], N) 
     end
     
-    if n != N
-        res += (1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-1)), kron(X, kron(Y, eye(2^(N-n-1))))) # X_n Y_n+1
-        res += (-1im*(-1)^(n + m)/(32*aT)) * kron(eye(2^(n-1)), kron(Y, kron(X, eye(2^(N-n-1))))) # Y_n X_n+1
+    if (n != N)
+        res += (1im*(-1)^(n + m)/(32*aT)) * get_op(["X", "Y", "Z"], [n, n+1, m], N) 
+        res += (-1im*(-1)^(n + m)/(32*aT)) * get_op(["Y", "X", "Z"], [n, n+1, m], N) 
+    end
+
+    if (m != 1)
+        res += (1im*(-1)^(n + m)/(32*aT)) * get_op(["Z", "X", "Y"], [n, m-1, m], N) 
+        res += (-1im*(-1)^(n + m)/(32*aT)) * get_op(["Z", "Y", "X"], [n, m-1, m], N) 
     end
     
+    if (m != N)
+        res += (-1im*(-1)^(n + m)/(32*aT)) * get_op(["Z", "X", "Y"], [n, m, m+1], N) 
+        res += (1im*(-1)^(n + m)/(32*aT)) * get_op(["Z", "Y", "X"], [n, m, m+1], N) 
+    end
+
+    if (n != 1) && (m != 1)
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "X", "Y"], [n-1, n, m-1, m], N) 
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "Y", "X"], [n-1, n, m-1, m], N)
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "X", "Y"], [n-1, n, m-1, m], N) 
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "Y", "X"], [n-1, n, m-1, m], N)  
+    end
+
+    if (n != 1) && (m != N)
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "Y", "X"], [n-1, n, m, m+1], N) 
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "X", "Y"], [n-1, n, m, m+1], N) 
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "X", "Y"], [n-1, n, m, m+1], N) 
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "Y", "X"], [n-1, n, m, m+1], N) 
+    end
+
+    if (n != N) && (m != 1)
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "X", "Y"], [n, n+1, m-1, m], N) 
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "Y", "X"], [n, n+1, m-1, m], N) 
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "Y", "X"], [n, n+1, m-1, m], N) 
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "X", "Y"], [n, n+1, m-1, m], N) 
+    end
+    
+    if (n != N) && (m != N)
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "Y", "X"], [n, n+1, m, m+1], N) 
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["X", "Y", "X", "Y"], [n, n+1, m, m+1], N) 
+        res += (-(-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "X", "Y"], [n, n+1, m, m+1], N) 
+        res += ((-1)^(n + m)/(256*aT^2)) * get_op(["Y", "X", "Y", "X"], [n, n+1, m, m+1], N) 
+    end
+
+    return res
 
 end
 
