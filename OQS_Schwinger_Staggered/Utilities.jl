@@ -698,36 +698,6 @@ function environment_correlator(type, n, m, aD_0, sigma_over_a)
 
 end
 
-function get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
-
-    """
-    This is getting a*L_m where L_m is the jump operator at site m
-    """
-
-    eye(n::Int64) = sparse(I, n, n);
-    X = sparse(Float64[0 1; 1 0])
-    Y = sparse(ComplexF64[0 -1im; 1im 0])
-    Z = sparse(Float64[1 0; 0 -1])
-
-    res = spzeros(2^(N), 2^(N))        
-            
-    res += 0.5*((-1)^m)*kron(eye(2^(m-1)), kron(Z, eye(2^(N-m))))
-    res += 0.5*((-1)^m)*eye(2^N)
-    
-    if m != 1
-        res += (1im*(-1)^m/(16*aT))*kron(eye(2^(m-2)), kron(X, kron(Y, eye(2^(N-m)))))
-        res += (-1im*(-1)^m/(16*aT))*kron(eye(2^(m-2)), kron(Y, kron(X, eye(2^(N-m)))))
-    end
-    
-    if m != N
-        res += (-1im*(-1)^m/(16*aT))*kron(eye(2^(m-1)), kron(X, kron(Y, eye(2^(N-m-1)))))
-        res += (1im*(-1)^m/(16*aT))*kron(eye(2^(m-1)), kron(Y, kron(X, eye(2^(N-m-1)))))
-    end
-
-    return res
-
-end
-
 function get_kinetic_part_aH_Hamiltonian_sparse_matrix(N)
     
     eye(n::Int64) = sparse(I, n, n);
@@ -749,7 +719,7 @@ end
 
 function get_op(ops, positions, N)
 
-    op_dict = Dict("X" => [0 1; 1 0], "Y" => [0 -1im; 1im 0], "Z" => [1 0; 0 -1])
+    op_dict = Dict("X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]))
     zipped = sort(zip(1:length(ops), positions, ops), by = x -> x[2])
     old_positions = [element[2] for element in zipped] 
     old_ops = [element[3] for element in zipped]
@@ -895,6 +865,319 @@ function get_LdagL_sparse_matrix(N, n, m, aT)
 
 end
 
+function get_Lindblad_jump_operator(m, aT, sites)
+
+    N = length(sites)
+
+    opsum = OpSum()
+
+    opsum += 0.5*(-1)^m,"Z",m
+
+    opsum += 0.5*(-1)^m,"Id",1
+
+    if m != 1
+        opsum += ( 1im*(-1)^m/(16*aT)),"X",m-1,"Y",m
+        opsum += (-1im*(-1)^m/(16*aT)),"Y",m-1,"X",m
+    end
+    
+    if m != N
+        opsum += (-1im*(-1)^m/(16*aT)),"X",m,"Y",m+1 
+        opsum += ( 1im*(-1)^m/(16*aT)),"Y",m,"X",m+1
+    end
+
+    return MPO(opsum, sites)
+
+end
+
+function get_LdagL(n, m, aT, sites)
+
+    N = length(sites)
+    
+    opsum = OpSum()
+
+    opsum += 0.25*(-1)^(n+m),"Z",n,"Z",m
+
+    opsum += 0.5*(-1)^(n+m),"Z",n
+
+    opsum += 0.25*(-1)^(n+m),"Id",1
+
+    if (n != 1)
+        opsum += (-1im*(-1)^(n + m)/(32*aT)),"X",n-1,"Y",n,"Z",m
+        opsum += (1im*(-1)^(n + m)/(32*aT)),"Y",n-1,"X",n,"Z",m
+    end
+    
+    if (n != N)
+        opsum += (1im*(-1)^(n + m)/(32*aT)),"X",n,"Y",n+1,"Z",m
+        opsum += (-1im*(-1)^(n + m)/(32*aT)),"Y",n,"X",n+1,"Z",m
+    end
+
+    if (m != 1)
+        opsum += (1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m-1,"Y",m
+        opsum += (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m-1,"X",m
+    end
+    
+    if (m != N)
+        opsum += (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m,"Y",m+1
+        opsum += (1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m,"X",m+1
+    end
+
+    if (n != 1) && (m != 1)
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m-1,"Y",m
+        opsum += ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m-1,"X",m
+        opsum += ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m-1,"Y",m
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m-1,"X",m
+    end
+
+    if (n != 1) && (m != N)
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m,"X",m+1
+        opsum += ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m,"Y",m+1
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m,"Y",m+1
+        opsum += ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m,"X",m+1
+    end
+
+    if (n != N) && (m != 1)
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m-1,"Y",m
+        opsum += ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m-1,"X",m
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m-1,"X",m
+        opsum += ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m-1,"Y",m
+    end
+    
+    if (n != N) && (m != N)
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m,"X",m+1
+        opsum += ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m,"Y",m+1
+        opsum += (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m,"Y",m+1
+        opsum += ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m,"X",m+1
+    end
+
+    return MPO(opsum, sites)
+
+end
+
+function hermitian_conjugate_mpo(mpo)
+
+    return dag(swapprime(mpo, 0, 1))
+
+end
+
+function transpose_mpo(mpo)
+
+    return swapprime(dag(conj(mpo)), 0 => 1)
+
+end
+
+function get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
+
+    # This returns a^2 * L^\dagger_n * L_m
+
+    N = length(sites)
+
+    mpo = aD_0 * environment_correlator(env_corr_type, 1, 1, aD_0, sigma_over_a) * get_LdagL(1, 1, aT, sites)
+
+    for n=1:N
+        for m=1:N
+
+            if !((n == 1) && (m == 1))
+                mpo += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * get_LdagL(n, m, aT, sites)
+            end
+
+        end
+    end
+
+    return mpo
+
+end
+
+function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+
+    opsum = OpSum()
+
+    # The -iH_left which goes from 1 to N
+    for n in 1:N-1
+        for m in n+1:N
+            # Long range ZZ interaction term
+            opsum += -1im*0.25*(1/x)*(N-m),"Z",n,"Z",m
+        end
+        # Kinetic term
+        opsum += -1im*0.5,"S+",n,"S-",n+1
+        opsum += -1im*0.5,"S-",n,"S+",n+1
+        opsum += -1im*(1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n
+        opsum += -1im*(0.5*ma*(-1)^(n-1)),"Z",n
+    end
+    opsum += -1im*(0.5*ma*(-1)^(N-1)),"Z",N
+    opsum += -1im*((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1
+
+    # # The +iH_right which goes from N+1 to 2N
+    for n in 1:N-1
+        for m in n+1:N
+            # Long range ZZ interaction term
+            opsum += 1im*0.25*(1/x)*(N-m),"Z",n+N,"Z",m+N
+        end
+        # Kinetic term
+        opsum += 1im*0.5,"S+",n+N,"S-",n+1+N
+        opsum += 1im*0.5,"S-",n+N,"S+",n+1+N
+        opsum += 1im*(1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n+N
+        opsum += 1im*(0.5*ma*(-1)^(n-1)),"Z",n+N
+    end
+    opsum += 1im*(0.5*ma*(-1)^(N-1)),"Z",N+N
+    opsum += 1im*((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1+N
+
+    h1 = MPO(opsum, sites)
+
+    for n=1:N
+        for m=1:N
+
+            # The L_m_left L_n_right
+            opsum = OpSum()
+            opsum += 0.5*(-1)^m,"Z",m
+            opsum += 0.5*(-1)^m,"Id",1
+            if m != 1
+                opsum += ( 1im*(-1)^m/(16*aT)),"X",m-1,"Y",m
+                opsum += (-1im*(-1)^m/(16*aT)),"Y",m-1,"X",m
+            end
+            if m != N
+                opsum += (-1im*(-1)^m/(16*aT)),"X",m,"Y",m+1 
+                opsum += ( 1im*(-1)^m/(16*aT)),"Y",m,"X",m+1
+            end 
+            h2 = MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites)
+            opsum = OpSum()
+            opsum += 0.5*(-1)^n,"Z",n+N
+            opsum += 0.5*(-1)^n,"Id",1
+            if n != 1
+                opsum += (-1im*(-1)^n/(16*aT)),"X",n-1,"Y",n+N
+                opsum += ( 1im*(-1)^n/(16*aT)),"Y",n-1,"X",n+N
+            end
+            if n != N
+                opsum += ( 1im*(-1)^n/(16*aT)),"X",n,"Y",n+N+1 
+                opsum += (-1im*(-1)^n/(16*aT)),"Y",n,"X",n+N+1
+            end 
+            h3 = MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites)
+            h1 += apply(h2, h3, cutoff = 1e-20)
+            
+            # # # The Ldag_n_L_m_left
+            opsum = OpSum()
+            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n,"Z",m
+            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n
+            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Id",1
+            if (n != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"X",n-1,"Y",n,"Z",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Y",n-1,"X",n,"Z",m
+            end            
+            if (n != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"X",n,"Y",n+1,"Z",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Y",n,"X",n+1,"Z",m
+            end
+            if (m != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m-1,"Y",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m-1,"X",m
+            end            
+            if (m != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m,"Y",m+1
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m,"X",m+1
+            end
+            if (n != 1) && (m != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m-1,"Y",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m-1,"X",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m-1,"Y",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m-1,"X",m
+            end
+            if (n != 1) && (m != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m,"X",m+1
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m,"Y",m+1
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m,"Y",m+1
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m,"X",m+1
+            end
+            if (n != N) && (m != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m-1,"Y",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m-1,"X",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m-1,"X",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m-1,"Y",m
+            end            
+            if (n != N) && (m != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m,"X",m+1
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m,"Y",m+1
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m,"Y",m+1
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m,"X",m+1
+            end
+            
+            # # The Ldag_n_L_m_right
+            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n+N,"Z",m+N
+            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n+N
+            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Id",1+N
+            if (n != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"X",n-1+N,"Y",n+N,"Z",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Y",n-1+N,"X",n+N,"Z",m+N
+            end            
+            if (n != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"X",n+N,"Y",n+1+N,"Z",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Y",n+N,"X",n+1+N,"Z",m+N
+            end
+            if (m != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"X",m-1+N,"Y",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"Y",m-1+N,"X",m+N
+            end            
+            if (m != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"X",m+N,"Y",m+1+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"Y",m+N,"X",m+1+N
+            end
+            if (n != 1) && (m != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"X",m-1+N,"Y",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"Y",m-1+N,"X",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"X",m-1+N,"Y",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"Y",m-1+N,"X",m+N
+            end
+            if (n != 1) && (m != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"Y",m+N,"X",m+1+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"X",m+N,"Y",m+1+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"X",m+N,"Y",m+1+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"Y",m+N,"X",m+1+N
+            end
+            if (n != N) && (m != 1)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"X",m-1+N,"Y",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"Y",m-1+N,"X",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m-1+N,"X",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m-1+N,"Y",m+N
+            end            
+            if (n != N) && (m != N)
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"Y",m+N,"X",m+1+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"X",m+N,"Y",m+1+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m+N,"Y",m+1+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m+N,"X",m+1+N
+            end
+            h1 += MPO(opsum, sites)
+
+        end
+    end
+
+    return h1 
+    
+end
+
+function get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
+
+    """
+    This is getting a*L_m where L_m is the jump operator at site m
+    """
+
+    eye(n::Int64) = sparse(I, n, n);
+    res = spzeros(2^(N), 2^(N))        
+    
+    res += 0.5*((-1)^m)*get_op(["Z"], [m], N)
+    res += 0.5*((-1)^m)*eye(2^N)
+    
+    if m != 1
+        res += (1im*(-1)^m/(16*aT))*get_op(["X", "Y"], [m-1, m], N)
+        res += (-1im*(-1)^m/(16*aT))*get_op(["Y", "X"], [m-1, m], N)
+    end
+    
+    if m != N
+        res += (-1im*(-1)^m/(16*aT))*get_op(["X", "Y"], [m, m+1], N)
+        res += (1im*(-1)^m/(16*aT))*get_op(["Y", "X"], [m, m+1], N)
+    end
+
+    return res
+
+end
+
 function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
 
     """
@@ -909,9 +1192,6 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
     L = spzeros(2^(2*N), 2^(2*N))
 
     eye(n::Int64) = sparse(I, n, n);
-    X = sparse(Float64[0 1; 1 0])
-    Y = sparse(ComplexF64[0 -1im; 1im 0])
-    Z = sparse(Float64[1 0; 0 -1])
 
     H = get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
 
@@ -925,8 +1205,8 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
             tmp2 = get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
 
             tmp3 = tmp1' * tmp2 # the dash is the dagger
-
-            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (kron(tmp2, transpose(tmp1')) - 0.5*kron(tmp3, eye(2^N)) -0.5*kron(eye(2^N), transpose(tmp3)))
+            
+            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((kron(tmp2, conj(tmp1))) - 0.5*(kron(tmp3, eye(2^N))) -0.5*(kron(eye(2^N), transpose(tmp3))))
 
         end
     end
