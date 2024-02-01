@@ -1,56 +1,18 @@
-function get_exp_Hz(sites, a, x, l_0, mg)
+function get_exp_L_taylor(sites, a, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
 
-    """
-    a = prefactor of H_z eg: -i tau / 2 to give exp(-i * tau * Hz / 2)
+    # a here is the coefficient namely exp(a * L_taylor)
+    mpo = a*get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
 
-    This operator includes the ZZ long range interactions, the mass term and the single Z term from the electric field term
-
-    """
-
-    N = length(sites)
-
-    opsum = OpSum()
-
-    for n in 1:N-1
-        
-        for k in n+1:N
-
-            # Z_n Z_k long range interaction
-            opsum += a*4*0.5*(N-k),"Sz",n,"Sz",k
-
-        end
-
-        # Single Z terms coming from the electric field term
-        opsum += a*2*(N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Sz",n
-
-        # Single Z terms from mass term
-        opsum += a*2*(mg*sqrt(x)*(-1)^(n-1)),"Sz",n
-
-    end
-
-    # For loop above goes from n = 1 to N-1 but mass term also has n = N
-    opsum += a*2*(mg*sqrt(x)*(-1)^(N-1)),"Sz",N
-
-    # Constant term
-    opsum += a*((l_0^2)*(N-1) + (l_0*N/2) + (N^2)/8),"Id",1
-
-    mpo = MPO(opsum, sites)
-
-    # exp(aHz/2) -> I + aHz/2
+    # exp(a * L_taylor) -> I + a * L_taylor
     final_mpo = MPO(sites, "Id") + mpo 
 
     return final_mpo
 
 end
 
-function get_Hz(sites, x, l_0, mg)
+function get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
 
-    """
-    a = prefactor of H_z eg: -i tau / 2 to give exp(-i * tau * Hz / 2)
-
-    This operator includes the ZZ long range interactions, the mass term and the single Z term from the electric field term
-
-    """
+    # Gets the part of the Lindblad operator to be taylor expanded in the trotterization
 
     N = length(sites)
 
@@ -60,27 +22,59 @@ function get_Hz(sites, x, l_0, mg)
         
         for k in n+1:N
 
-            opsum += 4*0.5*(N-k),"Sz",n,"Sz",k
+            opsum += (0.25/x)*(N-k),"Z",n,"Z",k
 
         end
 
-        opsum += 2*(N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Sz",n
+        opsum += ((N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2)/x),"Z",n
 
-        opsum += 2*(mg*sqrt(x)*(-1)^(n-1)),"Sz",n
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n
 
     end
 
-    opsum += 2*(mg*sqrt(x)*(-1)^(N-1)),"Sz",N
+    opsum += (0.5*ma*(-1)^(N-1)),"Z",N
 
-    opsum += ((l_0^2)*(N-1) + (l_0*N/2) + (N^2)/8),"Id",1
+    opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N/(4*x)) + (N^2)/16),"Id",1
 
-    mpo = MPO(opsum, sites)
+    mpo1 = MPO(opsum, sites)
 
-    return mpo
+    mpo2 = get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
+
+    return mpo1 + mpo2
 
 end
 
-function get_exp_Ho_list(sites, a, x)::Vector{ITensor}
+function get_H_taylor(sites, x, l_0, ma)
+
+    # Gets the part of the Lindblad operator to be taylor expanded in the trotterization
+
+    N = length(sites)
+
+    opsum = OpSum()
+
+    for n in 1:N-1
+        
+        for m in n+1:N
+
+            opsum += (0.25/x)*(N - m),"Z",n,"Z",m
+
+        end
+
+        opsum += ((N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2)/x),"Z",n
+
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n
+
+    end
+
+    opsum += (0.5*ma*(-1)^(N-1)),"Z",N
+
+    opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N/(4*x)) + (N^2)/(16*x)),"Id",1
+
+    return MPO(opsum, sites)
+
+end
+
+function get_exp_Ho_list(sites, a)::Vector{ITensor}
 
     """
 
@@ -97,8 +91,8 @@ function get_exp_Ho_list(sites, a, x)::Vector{ITensor}
 
     for n=1:2:(N-1)
 
-        hj = x * op("S-", sites[n]) * op("S+", sites[n+1])
-        hj += x * op("S+", sites[n]) * op("S-", sites[n+1])
+        hj = 0.5 * op("S-", sites[n]) * op("S+", sites[n+1])
+        hj += 0.5 * op("S+", sites[n]) * op("S-", sites[n+1])
         Gj = exp(a * hj)
         push!(gates, Gj)
 
@@ -108,7 +102,7 @@ function get_exp_Ho_list(sites, a, x)::Vector{ITensor}
 
 end
 
-function get_exp_He_list(sites, a, x)::Vector{ITensor}
+function get_exp_He_list(sites, a)::Vector{ITensor}
 
     """
 
@@ -125,8 +119,8 @@ function get_exp_He_list(sites, a, x)::Vector{ITensor}
 
     for n=2:2:(N-2)
 
-        hj = x * op("S-", sites[n]) * op("S+", sites[n+1])
-        hj += x * op("S+", sites[n]) * op("S-", sites[n+1])
+        hj = 0.5 * op("S-", sites[n]) * op("S+", sites[n+1])
+        hj += 0.5 * op("S+", sites[n]) * op("S-", sites[n+1])
         Gj = exp(a * hj)
         push!(gates, Gj)
 
@@ -136,42 +130,7 @@ function get_exp_He_list(sites, a, x)::Vector{ITensor}
 
 end
 
-function get_W_Hamiltonian(sites, x, l_0, mg)
-
-    """
-    This gives W = 2*H/(ag^2)
-    """
-
-    N = length(sites)
-
-    opsum = OpSum()
-
-    for n in 1:N-1
-        
-        for k in n+1:N
-            
-            opsum += 0.5*(N-k),"Z",n,"Z",k
-
-        end
-
-        opsum += x,"S+",n,"S-",n+1
-        opsum += x,"S-",n,"S+",n+1
-
-        opsum += (N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Z",n
-        
-        opsum += (mg*sqrt(x)*(-1)^(n-1)),"Z",n
-
-    end
-
-    opsum += (mg*sqrt(x)*(-1)^(N-1)),"Z",N
-
-    opsum += ((l_0^2)*(N-1) + (l_0*N/2) + (N^2)/8),"Id",1
-
-    return MPO(opsum, sites)
-
-end
-
-function get_aH_Hamiltonian(sites, x, l_0, ma)
+function get_aH_Hamiltonian(sites, x, l_0, ma, lambda)
 
     """
     This gives aH Hamiltonian
@@ -186,7 +145,7 @@ function get_aH_Hamiltonian(sites, x, l_0, ma)
         for m in n+1:N
             
             # Long range ZZ interaction term
-            opsum += 0.25*(1/x)*(N-m),"Z",n,"Z",m
+            opsum += 0.25*(1/x)*(N-m+lambda),"Z",n,"Z",m
 
         end
 
@@ -202,7 +161,7 @@ function get_aH_Hamiltonian(sites, x, l_0, ma)
 
     opsum += (0.5*ma*(-1)^(N-1)),"Z",N
 
-    opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1
+    opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",1
 
     return MPO(opsum, sites)
 
@@ -278,7 +237,7 @@ function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-9)
 
         idx = 2*idx-1
 
-        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*gate, 3 => 1)
+        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*conj(gate), 3 => 1)
 
         U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
         
@@ -325,7 +284,7 @@ function apply_even!(He_mpo_list, mpo; cutoff = 1e-9)
 
         idx = 2*idx
 
-        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*gate, 3 => 1)
+        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*conj(gate), 3 => 1)
 
         U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
         
@@ -355,7 +314,7 @@ end
 
 function get_entanglement_entropy(psi, site)
     
-    orthogonalize!(psi, site)
+    ITensors.orthogonalize!(psi, site)
     if site == 1
         U,S,V = svd(psi[site], siteind(psi, site))
     else
@@ -374,7 +333,7 @@ function get_Z_site_operator(site)
 
     ampo::Sum{Scaled{ComplexF64, Prod{Op}}} = OpSum()
 
-    ampo += 2,"Sz",site
+    ampo += "Z",site
 
     return ampo
 
@@ -438,7 +397,7 @@ function get_particle_number_MPO(sites)
 
     for n in 1:N
         
-        opsum += 0.5*(-1)^(n-1),"Sz",n
+        opsum += (-1)^(n-1),"Z",n
 
     end
 
@@ -648,38 +607,34 @@ function get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
     eye(n::Int64) = sparse(I, n, n);
 
     H = spzeros(2^(N), 2^(N))
-    X = sparse(Float64[0 1; 1 0])
-    Y = sparse(ComplexF64[0 -1im; 1im 0])
-    Z = sparse(Float64[1 0; 0 -1])
 
     # Kinetic term
     for n=1:N-1
-        H += (1/4)*kron(eye(2^(n-1)), kron(X, kron(X, eye(2^(N-(n+1))))))
-        H += (1/4)*kron(eye(2^(n-1)), kron(Y, kron(Y, eye(2^(N-(n+1))))))
+        H += (1/4)*get_op(["X", "X"], [n, n+1], N)
+        H += (1/4)*get_op(["Y", "Y"], [n, n+1], N)
     end
 
     # Long range ZZ interaction term
     for n = 1:N-1
         for m = n+1:N
-            H += (1/x)*(1/4)*(N - m + lambda)*kron(eye(2^(n-1)), kron(Z, kron(eye(2^(m-n-1)), kron(Z, eye(2^(N-m))))))
+            H += (0.25/x)*(N - m + lambda)*get_op(["Z", "Z"], [n, m], N)
         end
     end
 
-    # Mass term
+    # # Mass term
     for n=1:N
-        H += (ma/2)*((-1)^(n-1))*kron(eye(2^(n-1)), kron(Z, eye(2^(N-n))))
+        H += (0.5*ma)*((-1)^(n-1))*get_op(["Z"], [n], N)
     end
 
     # Electric single Z term
     for n=1:N-1
-        H += ((1/x)*(N/8 - (1/4)*ceil((n-1)/2) + l_0*(N-n)/2))*kron(eye(2^(n-1)), kron(Z, eye(2^(N-n))))
+        H += ((N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2)/x)*get_op(["Z"], [n], N)
     end
 
-    # Constant term
-    H += (l_0^2*(N-1)/(2*x) + l_0*N/(4*x) + (N^2)/(16*x) + lambda*N/(8*x))*eye(2^N)
+    # # Constant term
+    H += ((l_0^2)*(N-1)/(2*x) + (l_0*N/(4*x)) + (N^2)/(16*x) + lambda*N/(8*x))*eye(2^N)
 
     return H
-
 end
 
 function environment_correlator(type, n, m, aD_0, sigma_over_a)
@@ -717,10 +672,26 @@ function get_kinetic_part_aH_Hamiltonian_sparse_matrix(N)
 
 end
 
-function get_op(ops, positions, N)
+function my_kron(A, B)
+    
+    m, n = size(A)
+    p, q = size(B)
+
+    C = zeros(ComplexF64, m * p, n * q)
+
+    for i in 1:p
+        for j in 1:q
+            C[(i-1)*m+1 : i*m, (j-1)*n+1 : j*n] = A * B[i, j]
+        end
+    end
+
+    return C
+end
+
+function get_op(ops, positions, N; reverse_flag = true)
 
     op_dict = Dict("X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]))
-    zipped = sort(zip(1:length(ops), positions, ops), by = x -> x[2])
+    zipped = TupleTools.sort(Tuple(zip(1:length(ops), positions, ops)); by = x -> x[2])
     old_positions = [element[2] for element in zipped] 
     old_ops = [element[3] for element in zipped]
 
@@ -790,12 +761,21 @@ function get_op(ops, positions, N)
         pos = positions[i]
         op = ops[i]
     
-        res = kron(res, eye(2^how_many_I_before))
-        res = kron(res, op)
+        if reverse_flag
+            res = my_kron(res, eye(2^how_many_I_before))
+            res = my_kron(res, op)
+        else
+            res = kron(res, eye(2^how_many_I_before))
+            res = kron(res, op)
+        end
 
     end
 
-    res = kron(res, eye(2^(N - positions[end])))
+    if reverse_flag
+        res = my_kron(res, eye(2^(N - positions[end])))
+    else
+        res = kron(res, eye(2^(N - positions[end])))
+    end
 
     return res
 
@@ -967,7 +947,7 @@ end
 
 function get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
 
-    # This returns a^2 * L^\dagger_n * L_m
+    # This returns sum over n, m aD_0 * env_corr * a^2 * L^\dagger_n * L_m
 
     N = length(sites)
 
@@ -1196,7 +1176,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
     H = get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
 
     # Unitary part of Lindbladian
-    L += -1im * kron(H, eye(2^N)) + 1im * kron(eye(2^N), H) 
+    L += -1im * kron(H, eye(2^N)) + 1im * kron(eye(2^N), transpose(H)) 
 
     for n in 1:N
         for m in 1:N
@@ -1212,5 +1192,139 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
     end
 
     return L
+
+end
+
+function get_entanglement_entropy_vector(state, trace_indices, dof_list, tol=1e-12)
+    
+    # Inputs:
+    # state = numpy array statevector
+    # trace_indices = list of indices of sites to be traced out
+    # dof_list = list of number of degrees of freedom per site for all sites
+    # tol = any eigenvalue of the reduced density matrix that is smaller than this tolerance will be neglected
+    # Outputs:
+    # ee, rho_reduced = entanglement entropy and reduced density matrix
+    
+    # Make sure input is in the right type form and state is normalized to 1
+    state = state / norm(state)
+    
+    # Just a simple list containing the indices from 1 to N where N is the total number of sites
+    site_indices = 1:length(dof_list)
+    
+    # The dimension of each index to be traced
+    trace_dof = [dof_list[i] for i in trace_indices]
+
+    # List containing the indices of the sites not to be traced
+    untraced_indices = setdiff(site_indices, trace_indices)
+
+    # The dimension of each index in the list of untraced indices
+    untraced_dof = [dof_list[i] for i in untraced_indices]
+
+    # Reshape statevector into tensor of rank N with each index having some degrees of freedom specified by the dof_list
+    # for example if it is a spin-1/2 chain then each site has 2 degrees of freedom and the dof_list should be [2]*N = [2, 2, 2, 2, ..., 2]
+    state = reshape(state, dof_list)
+
+    # Revert indices of the reshaped tensor to meet the convention of qiskit eg for 4 qubits q3 q2 q1 q0 is the ordering
+    state = permutedims(state, site_indices[end:-1:1]) # TODO: check whether this is necessary for julia
+
+    # Permute the indices of the rank N tensor so the untraced indices are placed on the left and the ones to be traced on the right
+    state = permutedims(state, vcat(untraced_indices, trace_indices))
+
+    # Reshape the rank N tensor into a matrix where you merge the untraced indices into 1 index and you merge the traced indices into 1 index
+    # if the former index is called I and the latter J then we have state_{I, J}
+    state = reshape(state, (prod(untraced_dof), prod(trace_dof)))
+
+    # The reduced density matrix is given by state_{I, J}*state_complex_conjugated_{J, K}, so we see from here that the indices to be
+    # traced out ie the ones contained in the merged big index J are summed over in the matrix multiplication
+    rho_reduced = state * adjoint(state)
+
+    evals = eigen(rho_reduced).values
+
+    ee = sum(-real(eval)*log(real(eval)) for eval in evals if real(eval) >= tol)
+
+    return ee, rho_reduced # return both the entanglement entropy and the reduced density matrix
+end
+
+function apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
+
+    H_T = get_H_taylor(sites, x, l_0, ma)
+
+    # tmp1 = MPO(sites, "Id") + 0.5*1im*tau*H_T
+    # tmp2 = MPO(sites, "Id") - 0.5*1im*tau*H_T
+    # rho = apply(apply(tmp2, rho; cutoff = cutoff), tmp1; cutoff = cutoff)
+
+    tmp = 0.5*1im*tau*H_T
+
+    # rho + rho * idt/2 H_T * rho - idt/2 H_T * rho = ()
+    rho_final = rho + apply(rho, tmp; cutoff = cutoff) - apply(tmp, rho; cutoff = cutoff)
+
+    # second order term in the taylor expansion
+    # rho_final += (-tau^2/8)*apply(H_T, apply(H_T, rho; cutoff = cutoff); cutoff = cutoff) + (-tau^2/8)*apply(rho, apply(H_T, H_T; cutoff = cutoff); cutoff = cutoff) + (tau^2/4)*apply(H_T, apply(rho, H_T; cutoff = cutoff); cutoff = cutoff)
+
+    # - 0.5 * dt * 0.5 * L_n^\dagger L_m
+    LdagnLm = -0.5 * tau * 0.5 * get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
+
+    # sum over n and m: - 0.5 * dt/2 * L_n^\dagger L_m * rho
+    rho_final += apply(LdagnLm, rho; cutoff = cutoff) 
+    
+    # sum over n and m: - 0.5 * dt/2 * rho * L_n^\dagger L_m 
+    rho_final += apply(rho, LdagnLm; cutoff = cutoff) 
+
+    # sum over n and m: aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
+    for n=1:N
+        for m=1:N
+
+            # aD_0 * f(a(n-m)) * L_m
+            Lm = 0.5 * tau * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * get_Lindblad_jump_operator(m, aT, sites)
+
+            # L_n^\dagger (we only conjugate and not transpose cause we will apply it on the right of rho anyway)
+            Ldagn = conj(get_Lindblad_jump_operator(n, aT, sites))
+
+            # 0.5 * dt * aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
+            rho_final += apply(apply(Lm, rho; cutoff = cutoff), Ldagn; cutoff = cutoff)
+    
+        end
+    end
+
+    return rho_final
+
+end
+
+function get_entanglement_entropy_mpo(rho, trace_indices, sites; tol = 1e-12)
+
+    N = length(sites) - length(trace_indices)
+
+    tmp = []
+    for (idx, element) in enumerate(rho)
+        if idx in trace_indices
+            push!(tmp, element * delta(dag(sites[idx]'), sites[idx]))
+        else
+            push!(tmp, element)
+        end
+    end
+
+    a = contract(tmp)
+    a = Array(a, inds(a; :plev => 1)..., inds(a; :plev => 0)...)
+    a = reshape(a, 2^N, 2^N)
+
+    evals, _ = eigen(a)
+
+    ee = sum(-real(eval)*log(real(eval)) for eval in evals if real(eval) >= tol)
+
+    return ee
+
+end
+
+function get_entanglement_entropy_matrix(N, rho_m, keep_indices; tol = 1e-12)
+
+    a = partial_trace(rho_m, keep_indices)
+
+    a = reshape(a, 2^(div(N, 2)), 2^(div(N, 2)))
+
+    evals, _ = eigen(a)
+
+    ee2 = sum(-real(eval)*log(real(eval)) for eval in evals if real(eval) >= tol)
+
+    return ee2
 
 end
