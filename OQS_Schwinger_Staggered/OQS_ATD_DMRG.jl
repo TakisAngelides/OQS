@@ -3,49 +3,57 @@ using LinearAlgebra
 using HDF5
 include("Utilities.jl")
 
+# Inputs
 N = parse(Int, ARGS[1])
-tau = parse(Float64, ARGS[2]) # time step in time evolution rho -> exp(-tau H) after one step
+tau = parse(Float64, ARGS[2]) # time step in time evolution rho -> exp(-tau L) after one step
 cutoff = parse(Float64, ARGS[3]) # cutoff for SVD
 tol = parse(Float64, ARGS[4]) # tolerance for DMRG convergence and ATDDMRG convergence
 x = parse(Float64, ARGS[5])
 l_0 = parse(Float64, ARGS[6])
-mg = parse(Float64, ARGS[7])
+ma = parse(Float64, ARGS[7])
 max_steps = parse(Int, ARGS[8]) # another stopping condition for DMRG and ATDDMRG
 project_number = parse(Int, ARGS[9])
-get_dmrg = parse(Bool, ARGS[10])
-h5_path = ARGS[11]
-measure_every = parse(Int, ARGS[12]) # this determines how often to save rho and measure the energy in ATDDMRG
-h5_previous_path = ARGS[13]
+h5_path = ARGS[10]
+measure_every = parse(Int, ARGS[11]) # this determines how often to save rho and measure the energy in ATDDMRG
+h5_previous_path = ARGS[12]
 file = h5open(h5_path, "w")
+D = parse(Float64, ARGS[13])
+lambda = parse(Float64, ARGS[14])
+aD_0 = parse(Float64, ARGS[15])
+aT = parse(Float64, ARGS[16])
+sigma_over_a = parse(Float64, ARGS[17])
+env_corr_type = ARGS[18]
+max_sweeps = parse(Int, ARGS[19])
+sparse_evol = parse(Bool, ARGS[20])
 
-function get_dmrg_results()
-
-    sites = siteinds("S=1/2", N) # , conserve_qns = true) 
-    H = get_Hamiltonian(sites, x, l_0, mg)
-    # state = [isodd(n) ? "0" : "1" for n = 1:N]
-    # psi0 = randomMPS(sites, state, linkdims = 2)
-    psi0 = randomMPS(sites, linkdims = 2)
-    obs = DMRGObserver(;energy_tol = tol)
-    nsweeps = max_steps
-
-    dmrg_energy, dmrg_state = dmrg(H, psi0; nsweeps, cutoff, observer=obs, outputlevel=1)
-
-    write(file, "dmrg_energy", dmrg_energy)
-    write(file, "dmrg_state", dmrg_state)
-
-end
-
-function run_iatdDMRG()
+function run_ATDDMRG()
 
     t = time()
     
     # Prepare initial rho
     if h5_previous_path == "None" 
-        println("Initializing with the identity MPO\n")
-        sites = siteinds("S=1/2", N, conserve_qns = true)
-        rho = MPO(sites, "Id")
-        rho = rho/tr(rho)
-    else
+        
+        # Initialize rho from the ground state of the Hamiltonian
+        println("Initializing with the MPO corresponding to the ground state of H_system\n")
+        sites = siteinds("S=1/2", N, conserve_qns = false)
+        state = [isodd(n) ? "0" : "1" for n = 1:N]
+        mps = randomMPS(sites, state, linkdims = D)
+        H = get_aH_Hamiltonian(sites, x, l_0, ma, lambda)
+        sweeps = Sweeps(max_steps, maxdim = D)
+        observer = DMRGObserver(;energy_tol = tol)
+        gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true) 
+        rho = outer(gs', gs)
+        println("The ground state energy was found to be $(gs_energy)\n")
+        L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
+        L_taylor_expectation_value = inner(L_taylor_expanded_part_tmp, rho)
+        println("The expectation value of the taylor expanded part of the Lindblad operator is $(L_taylor_expectation_value)")
+        println("The L_taylor*dt should be much less than one: $(L_taylor_expectation_value*dt)")
+        println("The trace of initial rho should be 1: $(tr(rho))\n")
+        flush(stdout)
+    
+    else 
+
+        # This is the case when the time step has decreased but continues evolving a given state from a larger time step
         println("Initializing the MPO from h5_previous_path = $(h5_previous_path)\n")
         flush(stdout)
         previous_file = h5open(h5_previous_path, "r")
@@ -57,158 +65,151 @@ function run_iatdDMRG()
         orthogonalize!(rho, 1) # put the MPO in right canonical form
         rho = rho/tr(rho)
         sites = dag(reduce(vcat, siteinds(rho; :plev => 0)))
+    
     end
 
-    # Get the Hamiltonian MPO
-    H = get_Hamiltonian(sites, x, l_0, mg)
+    # Get the exponential of the Lindblad terms for evolution 
+    odd_gates_2 = get_exp_Ho_list(sites, -1im*tau/2) # odd/2
+    odd_gates = get_exp_Ho_list(sites, -1im*tau) # odd
+    even_gates = get_exp_He_list(sites, -1im*tau) # even
 
-    # Get the exponential of the Hamiltonian terms for evolution 
-    # remember we will apply rho(beta) exp(-beta H) as exp(-beta/2 H) I exp(-beta/2 H) and then the trotterization has beta/2/2 on Hz, Ho and beta/2 on He
-    # but we also want to take rho(beta) = rho(beta/2)^dagger * rho(beta/2) to fix posivity
-    odd_gates_4 = get_exp_Ho_list(sites, -tau/4, x) # odd/4
-    exp_Hz_mpo = get_exp_Hz(sites, -tau/4, x, l_0, mg) # 1+aH_z/4
-    even_gates_2 = get_exp_He_list(sites, -tau/2, x) # even/2
-    odd_gates_2 = get_exp_Ho_list(sites, -tau/2, x) # odd/2
-
-    energy_list = Float64[]
+    # Prepare the lists for the tracked observables and the associated MPO
     max_bond_list = Int[]
+    ee_list = Float64[]
     step_num_list = Int[]
-    E_previous = inner(H, rho) 
-    push!(step_num_list, 0)
-    push!(energy_list, E_previous) # the 0 here is the step number
-    push!(max_bond_list, maxlinkdim(rho))
-    E_current = 0
-    
-    println("The time to get the Hamiltonian, initial rho, MPO lists and the first E_previous is: $(time() - t)\n")
-    flush(stdout)
-    
-    println("Now starting the iattDMRG algorithm\n")
-    flush(stdout)
+    z_middle_mpo = MPO(get_Z_site_operator(div(N, 2)), sites)
+    z_middle_list = Float64[]
 
+    # Push into the lists the initial state observables
+    push!(step_num_list, 0)
+    push!(max_bond_list, maxlinkdim(rho))
+    push!(z_middle_list, real(tr(apply(rho, z_middle_mpo))))
+    push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
+    
+    # Write initial state to file and print statements
+    println("The time to get the initial rho and MPO lists is: $(time() - t)\n")
+    println("Now starting the ATDDMRG algorithm\n")
     println("Step: 0, E = $(E_previous)\n")
     flush(stdout)
     write(file, "rho_0", rho)
 
     t = time()
-    no_convergence = true # flag for some print statement after the for loop
     for step in 1:max_steps
     
         if step == 1
 
-            apply_odd!(odd_gates_4, rho; cutoff = cutoff)
-            
+            apply_odd!(odd_gates_2, rho; cutoff = cutoff)
             rho = rho/tr(rho)
-            
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            
+        
+            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
             rho = rho/tr(rho)
-            
-            apply_even!(even_gates_2, rho; cutoff = cutoff)
-            
+
+            apply_even!(even_gates, rho; cutoff = cutoff)
             rho = rho/tr(rho)
-            
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            
+
+            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
             rho = rho/tr(rho)
             
         elseif step == max_steps
         
+            apply_odd!(odd_gates, rho; cutoff = cutoff)
+            rho = rho/tr(rho)
+
+            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
+            rho = rho/tr(rho)
+
+            apply_even!(even_gates, rho; cutoff = cutoff)
+            rho = rho/tr(rho)
+
+            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
+            rho = rho/tr(rho)
+
             apply_odd!(odd_gates_2, rho; cutoff = cutoff)
-            
-            rho = rho/tr(rho)
-            
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            
-            rho = rho/tr(rho)
-            
-            apply_even!(even_gates_2, rho; cutoff = cutoff)
-            
-            rho = rho/tr(rho)
-            
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            
-            rho = rho/tr(rho)
-            
-            apply_odd!(odd_gates_4, rho; cutoff = cutoff)
-            
             rho = rho/tr(rho)
                 
         else
 
-            apply_odd!(odd_gates_2, rho; cutoff = cutoff)
-            
+            apply_odd!(odd_gates, rho; cutoff = cutoff)
             rho = rho/tr(rho)
-            
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            
+
+            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
             rho = rho/tr(rho)
-            
-            apply_even!(even_gates_2, rho; cutoff = cutoff)
-            
+
+            apply_even!(even_gates, rho; cutoff = cutoff)
             rho = rho/tr(rho)
-            
-            rho = apply(apply(exp_Hz_mpo, rho; cutoff = cutoff), replaceprime(dag(exp_Hz_mpo'), 2 => 0); cutoff = cutoff)
-            
+
+            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
             rho = rho/tr(rho)
 
         end
 
+        # Take care of hermiticity and positivity of the density matrix
         rho = add(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff)/2 # fix hermiticity with rho -> rho dagger + rho over 2
         rho = apply(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff) # fix positivity with rho beta = rho beta over 2 dagger times rho beta over 2 - this results in a right canonical form MPO
         rho = rho/tr(rho)
         
-        if step % measure_every == 0
+        if (step % measure_every == 0) || (step == max_steps)
 
-            E_current = inner(H, rho) 
+            # Measure the observables
             push!(step_num_list, step)
-            push!(energy_list, E_current)
             push!(max_bond_list, maxlinkdim(rho))
+            push!(z_middle_list, real(tr(apply(rho, z_middle_mpo))))
+            push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
+            
+            # Write the state to file
             write(file, "rho_$(step)", rho)
 
-            println("Step: $step, E = $E_current, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)\n")
+            # Refresh time variable and print statement
+            println("Step: $step, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)\n")            
             flush(stdout)
             t = time()
-            
-            e = abs(E_current-E_previous)/N 
-            if e < tol
-                no_convergence = false
-                println("The absolute value of the difference in energy at time step $step was found to be $e which is less than tol = $tol, hence the while loop breaks here.\n")
-                flush(stdout)
-                write(file, "energy_list", energy_list)
-                write(file, "max_bond_list", max_bond_list)
-                write(file, "step_num_list", step_num_list)
-                break
-            end
 
-            E_previous = E_current
-            
-        end
-
-        if step == max_steps 
-            write(file, "energy_list", energy_list)
-            write(file, "max_bond_list", max_bond_list)
-            write(file, "step_num_list", step_num_list)
-            if step % measure_every != 0
-                write(file, "rho_$(step)", rho)
-            end
         end
 
     end
-    
-    if no_convergence
-        println("The absolute value of the difference in energy after $max_steps steps did not reach the desired tol = $tol, hence the function stops here.\n")
-        flush(stdout)
+
+    # Write observable lists to file
+    write(file, "step_num_list", step_num_list)
+    write(file, "max_bond_list", max_bond_list)
+    write(file, "z_middle_list", z_middle_list)
+    write(file, "ee_list", ee_list)
+
+    # Sparse matrix evolution if required
+    if sparse_evol
+
+        # Prepare the initial state and the Z observable at the middle of the lattice to be tracked
+        z_op = get_op(["Z"], [div(N, 2)], N)
+        rho = outer(gs', gs)
+        rho_m = mpo_to_matrix(rho)
+        rho_v = reshape(rho_m, length(rho_m))
+
+        # Get the Lindblad operator and its exponential which is the evolution operator
+        L = get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+        evolution_operator = exp(Matrix(L)*tau)
+        
+        # Prepare the list to store the tracked observables and get the initial state values
+        ee_list_sparse = [get_entanglement_entropy_matrix(N, reshape(rho_v, 2^N, 2^N), 1:div(N, 2))]
+        z_middle_list_sparse = [real(tr(rho_m*z_op))]
+
+        # Do the evolution
+        for _ in 1:max_steps
+
+            # One time step evolution
+            rho_v = evolution_operator*rho_v
+
+            # Measure tracked observables
+            push!(ee_list_sparse, get_entanglement_entropy_matrix(N, reshape(rho_v, 2^N, 2^N), 1:div(N, 2)))
+            push!(z_middle_list_sparse, real(tr(reshape(rho_v, (2^N, 2^N))*z_op)))
+            
+        end
+
+        # Write the sparse observable lists to file
+        write(file, "ee_list_sparse", ee_list_sparse)
+        write(file, "z_middle_list_sparse", z_middle_list_sparse)
+
     end
 
 end
 
-if get_dmrg
-    println("DMRG starting now\n")
-    get_dmrg_results()
-    println("DMRG is finished, starting iattDMRG now\n")
-    run_iatdDMRG()
-else
-    run_iatdDMRG() 
-end
-
+run_ATDDMRG()
 close(file)

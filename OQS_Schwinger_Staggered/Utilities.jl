@@ -1258,7 +1258,7 @@ function apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over
     # rho + rho * idt/2 H_T * rho - idt/2 H_T * rho = ()
     rho_final = rho + apply(rho, tmp; cutoff = cutoff) - apply(tmp, rho; cutoff = cutoff)
 
-    # second order term in the taylor expansion
+    # second order term in the taylor expansion only for the Hamiltonian part
     # rho_final += (-tau^2/8)*apply(H_T, apply(H_T, rho; cutoff = cutoff); cutoff = cutoff) + (-tau^2/8)*apply(rho, apply(H_T, H_T; cutoff = cutoff); cutoff = cutoff) + (tau^2/4)*apply(H_T, apply(rho, H_T; cutoff = cutoff); cutoff = cutoff)
 
     # - 0.5 * dt * 0.5 * L_n^\dagger L_m

@@ -17,10 +17,18 @@ cutoff_list = [1E-14] # this is for compression after gate application
 tol_list = [1E-12] # this is when to stop the iTEBD regarding convergence in energy
 x_list = [0.1, 1.1]
 l_0_list = [0.4, 0.8]
-mg_list = [0.1, 1.2]
+ma_list = [0.1, 1.2]
 get_dmrg = 'true'
 max_steps_list = [20000] 
 measure_every_list = [1] # list(np.array(max_steps_list)//1000)
+D_list = [1000]
+lambd_list = [0.0]
+aD_0_list = [0.0, 1.0]
+aT_list = [10.0]
+sigma_over_a_list = [3.0]
+env_corr_type_list = ["delta"]
+max_sweeps_list = [100]
+sparse_evol_list = [True]
 project_number = 1 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
@@ -47,47 +55,49 @@ def write_dag():
         # This defines the Job submit file inline (ie inside the dag submit file)
         counter = 0
         
-        for N in N_list:
-            
-            for tau_idx, tau in enumerate(tau_list):
-                
-                tau_previous = tau_previous_list[tau_idx]
-                
-                for cutoff in cutoff_list:
-                    
-                    for tol in tol_list:
-                        
-                        for x in x_list:
-                            
-                            for l_0 in l_0_list:
-                                
-                                for mg in mg_list:
-                                    
-                                    for max_steps_idx, max_steps in enumerate(max_steps_list):
-                                        
-                                        measure_every = measure_every_list[max_steps_idx]
-                                        
-                                        if tau_idx == 0:
-                                            h5_previous_path = 'None'
-                                        else:
-                                            h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l0_{l_0}_mg_{mg}.h5'
-                                        h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l0_{l_0}_mg_{mg}.h5'
-                                        
-                                        tau_text = str(tau).replace('.', '')
-                                        x_text = str(x).replace('.', '')
-                                        l_0_text = str(l_0).replace('.', '')
-                                        mg_text = str(mg).replace('.', '')
-                                        
-                                        job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_mg_{mg_text}'
-                                        f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
-                                        f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" mg="{mg}" max_steps="{max_steps}" project_number="{project_number}" get_dmrg="{get_dmrg}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" path_to_project="{path_to_project}" file_to_run="{file_to_run}"\n')
-                                        # f.write('RETRY ' + job_name + ' 3\n')
-                                        
-                                        if tau_idx != 0:
-                                            
-                                            tau_previous_text = str(tau_previous).replace('.', '')
-                                            previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_mg_{mg_text}'
-                                            f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
+        for N in N_list:            
+            for tau_idx, tau in enumerate(tau_list):                
+                tau_previous = tau_previous_list[tau_idx]                
+                for cutoff in cutoff_list:                    
+                    for tol in tol_list:                        
+                        for x in x_list:                            
+                            for l_0 in l_0_list:                                
+                                for D in D_list:
+                                    for lambd in lambd_list:
+                                        for aT in aT_list:
+                                            for sigma_over_a in sigma_over_a_list:
+                                                for env_corr_type in env_corr_type_list:
+                                                    for max_sweeps in max_sweeps_list:
+                                                        for sparse_evol in sparse_evol_list:
+                                                            for ma in ma_list:
+                                                                for max_steps_idx, max_steps in enumerate(max_steps_list):
+                                                                    
+                                                                    measure_every = measure_every_list[max_steps_idx]
+                                                                    
+                                                                    if tau_idx == 0:
+                                                                        h5_previous_path = 'None'
+                                                                    else:
+                                                                        h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l0_{l_0}_mg_{mg}.h5'
+                                                                    h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l0_{l_0}_mg_{mg}.h5'
+                                                                    
+                                                                    tau_text = str(tau).replace('.', '')
+                                                                    x_text = str(x).replace('.', '')
+                                                                    l_0_text = str(l_0).replace('.', '')
+                                                                    ma_text = str(ma).replace('.', '')
+                                                                    sigma_over_a_text = str(sigma_over_a_text).replace('.', '')
+                                                                    aT_text = str(aT_text).replace('.', '')
+                                                                    lambd_text = str(lambd_text).replace('.', '')
+                                                                    
+                                                                    job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}'
+                                                                    f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
+                                                                    f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}"\n')
+                                                                    # f.write('RETRY ' + job_name + ' 3\n')
+                                                                    
+                                                                    if tau_idx != 0:
+                                                                        
+                                                                        tau_previous_text = str(tau_previous).replace('.', '')
+                                                                        previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}'
+                                                                        f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
 
 def make_plots():
     
