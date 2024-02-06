@@ -1,8 +1,8 @@
 environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULIA_DEPOT_PATH'"
 
-executable = /lustre/fs24/group/cqta/tangelides/julia-1.8.5/bin/julia
+executable = /lustre/fs24/group/cqta/tangelides/julia-1.10.0/bin/julia
 
-arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(mg) $(max_steps) $(project_number) $(get_dmrg) $(h5_path) $(measure_every) $(h5_previous_path)
+arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(ma) $(max_steps) $(project_number) $(h5_path) $(measure_every) $(h5_previous_path) $(D) $(lambda) $(aD_0) $(aT) $(sigma_over_a) $(env_corr_type) $(max_sweeps) $(sparse_evol)
 
 transfer_input_files = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl
 
@@ -17,10 +17,10 @@ should_transfer_files = IF_NEEDED
 
 # max_retries = 5
 
-error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_mg_$(mg)_max_steps_$(max_steps)_get_dmrg_$(get_dmrg).error
+error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol).error
 
-output = $(path_to_project)/DAGS/$(project_number)/Logs/Output/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_mg_$(mg)_max_steps_$(max_steps)_get_dmrg_$(get_dmrg).out                    
+output = $(path_to_project)/DAGS/$(project_number)/Logs/Output/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol).out                    
 
-log = $(path_to_project)/DAGS/$(project_number)/Logs/Log/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_mg_$(mg)_max_steps_$(max_steps)_get_dmrg_$(get_dmrg).log 
+log = $(path_to_project)/DAGS/$(project_number)/Logs/Log/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol).log 
 
 queue

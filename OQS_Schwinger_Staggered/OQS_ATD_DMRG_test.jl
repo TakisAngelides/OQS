@@ -5,6 +5,8 @@ using Plots
 using SparseArrays
 using Arpack
 using KrylovKit
+using TupleTools
+using OpenQuantumTools
 include("Utilities.jl")
 
 N = 4
@@ -23,7 +25,7 @@ beta = 1/aT
 sigma_over_a = 3.0
 env_corr_type = "delta"
 max_sweeps = 1000
-max_steps = 200
+max_steps = 20
 measure_every = 1 # this determines how often to save rho and measure the energy in ATDDMRG
 
 function run_ATDDMRG()
@@ -36,7 +38,7 @@ function run_ATDDMRG()
     state = [isodd(n) ? "0" : "1" for n = 1:N]
     mps = randomMPS(sites, state)
     H = get_aH_Hamiltonian(sites, x, l_0, ma, 100.0)
-    sweeps = Sweeps(max_steps, maxdim = D)
+    sweeps = Sweeps(max_steps; maxdim = D)
     observer = DMRGObserver(;energy_tol = tol)
     gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true)
     

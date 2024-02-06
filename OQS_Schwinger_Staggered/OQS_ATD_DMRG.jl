@@ -1,6 +1,11 @@
 using ITensors
 using LinearAlgebra
 using HDF5
+using SparseArrays
+using Arpack
+using KrylovKit
+using TupleTools
+using OpenQuantumTools
 include("Utilities.jl")
 
 # Inputs
@@ -17,7 +22,7 @@ h5_path = ARGS[10]
 measure_every = parse(Int, ARGS[11]) # this determines how often to save rho and measure the energy in ATDDMRG
 h5_previous_path = ARGS[12]
 file = h5open(h5_path, "w")
-D = parse(Float64, ARGS[13])
+D = parse(Int64, ARGS[13])
 lambda = parse(Float64, ARGS[14])
 aD_0 = parse(Float64, ARGS[15])
 aT = parse(Float64, ARGS[16])
@@ -37,19 +42,20 @@ function run_ATDDMRG()
         println("Initializing with the MPO corresponding to the ground state of H_system\n")
         sites = siteinds("S=1/2", N, conserve_qns = false)
         state = [isodd(n) ? "0" : "1" for n = 1:N]
-        mps = randomMPS(sites, state, linkdims = D)
+        mps = randomMPS(sites, state)
         H = get_aH_Hamiltonian(sites, x, l_0, ma, lambda)
-        sweeps = Sweeps(max_steps, maxdim = D)
+        sweeps = Sweeps(max_sweeps; maxdim = D)
         observer = DMRGObserver(;energy_tol = tol)
         gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true) 
         rho = outer(gs', gs)
         println("The ground state energy was found to be $(gs_energy)\n")
         L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
-        L_taylor_expectation_value = inner(L_taylor_expanded_part_tmp, rho)
-        println("The expectation value of the taylor expanded part of the Lindblad operator is $(L_taylor_expectation_value)")
-        println("The L_taylor*dt should be much less than one: $(L_taylor_expectation_value*dt)")
+        L_taylor_expectation_value = real(inner(L_taylor_expanded_part_tmp, rho))
+        println("The expectation value of the taylor expanded part of the Lindblad operator is $(L_taylor_expectation_value)\n")
+        println("The L_taylor*tau/2 should be much less than one: $(L_taylor_expectation_value*tau/2)\n")
         println("The trace of initial rho should be 1: $(tr(rho))\n")
         flush(stdout)
+
     
     else 
 
@@ -62,7 +68,7 @@ function run_ATDDMRG()
         max_rho_key_num = rho_keys[argmax(parse.(Int, [split(item, "_")[2] for item in rho_keys]))]
         max_rho_key = "$(max_rho_key_num)"
         rho = read(previous_file, max_rho_key, MPO)
-        orthogonalize!(rho, 1) # put the MPO in right canonical form
+        ITensors.orthogonalize!(rho, 1) # put the MPO in right canonical form
         rho = rho/tr(rho)
         sites = dag(reduce(vcat, siteinds(rho; :plev => 0)))
     
@@ -89,7 +95,6 @@ function run_ATDDMRG()
     # Write initial state to file and print statements
     println("The time to get the initial rho and MPO lists is: $(time() - t)\n")
     println("Now starting the ATDDMRG algorithm\n")
-    println("Step: 0, E = $(E_previous)\n")
     flush(stdout)
     write(file, "rho_0", rho)
 
@@ -175,7 +180,7 @@ function run_ATDDMRG()
     write(file, "ee_list", ee_list)
 
     # Sparse matrix evolution if required
-    if sparse_evol
+    if (sparse_evol) && (h5_previous_path == "None")
 
         # Prepare the initial state and the Z observable at the middle of the lattice to be tracked
         z_op = get_op(["Z"], [div(N, 2)], N)
@@ -213,3 +218,6 @@ end
 
 run_ATDDMRG()
 close(file)
+
+println("Finished")
+flush(stdout)
