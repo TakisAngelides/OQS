@@ -1328,3 +1328,41 @@ function get_entanglement_entropy_matrix(N, rho_m, keep_indices; tol = 1e-12)
     return ee2
 
 end
+
+function check_zeroq(n, N)
+    return sum((digits(n-1, base=2, pad = N).*2).-1) == 0
+end
+
+function project_zeroq(M)
+
+    nrow, ncol = size(M)
+    n = Int(log2(nrow))
+    new_nrow = binomial(n, div(n, 2))
+    res = zeros(ComplexF64, new_nrow, new_nrow)
+
+    row_count = 0
+    for row in 1:nrow
+
+        if !(check_zeroq(row, n))
+            continue
+        else
+            row_count += 1
+        end
+
+        col_count = 0
+        for col in 1:ncol
+
+            if !(check_zeroq(col, n))
+                continue
+            else
+                col_count += 1
+                res[row_count, col_count] = M[row, col]
+            end
+
+        end
+
+    end
+
+    return res
+
+end
