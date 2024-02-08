@@ -10,24 +10,24 @@ path_to_project = f'{path_to_repo}/OQS_Schwinger_Staggered'
 file_to_run = 'OQS_ATD_DMRG.jl'
 name_of_dag = 'OQS_ATD_DMRG'
 
-N_list = [4]
-tau_list = [10**(-pow) for pow in [3, 4]] # time step size
+N_list = [8]
+tau_list = [10**(-pow) for pow in [4, 5]] # time step size
 tau_previous_list = [0] + tau_list[:-1] # this can be left untouched
 cutoff_list = [1E-14] # this is for compression after gate application
 tol_list = [1E-12] # tol for dmrg stopping condition
 x_list = [1/0.8**2]
 l_0_list = [0.0]
 ma_list = [0.5]
-max_steps_list = [3] # how many ATDDMRG time steps to do 
+max_steps_list = [10000] # how many ATDDMRG time steps to do 
 measure_every_list = [1] # how often to measure observables and store the density matrix
 D_list = [1000] # anyway the dmrg will stop from tol
 lambd_list = [0.0]
 aD_0_list = [1.0]
 aT_list = [10.0]
 sigma_over_a_list = [3.0]
-env_corr_type_list = ["delta", "gaussian"]
+env_corr_type_list = ["delta"]
 max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
-project_number = 1 # <==================================== Important to change according to which project file ================================
+project_number = 2 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
 

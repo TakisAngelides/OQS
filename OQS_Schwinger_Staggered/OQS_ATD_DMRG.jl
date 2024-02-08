@@ -43,7 +43,7 @@ function run_ATDDMRG()
         sites = siteinds("S=1/2", N, conserve_qns = false)
         state = [isodd(n) ? "0" : "1" for n = 1:N]
         mps = randomMPS(sites, state)
-        H = get_aH_Hamiltonian(sites, x, l_0, ma, lambda)
+        H = get_aH_Hamiltonian(sites, x, l_0, ma, 100.0) # TODO: once you take care to be able to do conserve_qns = true swap 100.0 with lambda
         sweeps = Sweeps(max_sweeps; maxdim = D)
         observer = DMRGObserver(;energy_tol = tol)
         gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true) 
