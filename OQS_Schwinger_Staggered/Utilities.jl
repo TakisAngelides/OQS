@@ -1330,7 +1330,7 @@ function get_entanglement_entropy_matrix(N, rho_m, keep_indices; tol = 1e-12)
 end
 
 function check_zeroq(n, N)
-    return sum((digits(n-1, base=2, pad = N).*2).-1) == 0
+    return sum((digits(n, base=2, pad = N).*2).-1) == 0
 end
 
 function project_zeroq(M)
@@ -1343,7 +1343,7 @@ function project_zeroq(M)
     row_count = 0
     for row in 1:nrow
 
-        if !(check_zeroq(row, n))
+        if !(check_zeroq(row-1, n))
             continue
         else
             row_count += 1
@@ -1352,7 +1352,7 @@ function project_zeroq(M)
         col_count = 0
         for col in 1:ncol
 
-            if !(check_zeroq(col, n))
+            if !(check_zeroq(col-1, n))
                 continue
             else
                 col_count += 1
@@ -1364,5 +1364,173 @@ function project_zeroq(M)
     end
 
     return res
+
+end
+
+function get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+
+    ldim = binomial(N, div(N, 2))^2
+
+    L = spzeros(ldim, ldim)
+
+    eye(n::Int64) = sparse(I, n, n);
+
+    H = get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
+    H_r = project_zeroq(H)
+    idnt = eye(2^N)
+    idnt_r = project_zeroq(idnt)
+
+    # Unitary part of Lindbladian
+    L += -1im * kron(H_r, idnt_r) + 1im * kron(idnt_r, transpose(H_r)) 
+
+    for n in 1:N
+        for m in 1:N
+
+            tmp1 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, n, aT))
+            tmp2 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, m, aT))
+
+            tmp3 = tmp1' * tmp2 # the dash is the dagger
+            
+            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((kron(tmp2, conj(tmp1))) - 0.5*(kron(tmp3, idnt_r)) -0.5*(kron(idnt_r, transpose(tmp3))))
+
+        end
+    end
+
+    return L
+
+end
+
+function get_entanglement_entropy_reduced_matrix(N, rho_m; tol = 1e-12)
+
+    # If you have 4 qubits 1234 it computes the von Neumann entropy by partitioning 
+    # the system in half 12 34 so it always assumes you have even number of sites
+
+    dimres = 2^(div(N, 2))
+    
+    res = zeros(ComplexF64, dimres, dimres)
+
+    zero_q_list = [i for i in 1:2^N if check_zeroq(i-1, N)]
+
+    for row in 1:dimres
+
+        for col in 1:dimres
+
+            for trace_idx in 1:dimres
+
+                bigrow = parse(Int, join(vcat(digits(row-1, base=2, pad = div(N,2)) |> reverse, digits(trace_idx-1, base=2, pad = div(N,2)) |> reverse)), base = 2) # this is bin(row)bin(trace_idx)
+                bigcol = parse(Int, join(vcat(digits(col-1, base=2, pad = div(N,2)) |> reverse, digits(trace_idx-1, base=2, pad = div(N,2)) |> reverse)), base = 2) # this is bin(col)bin(trace_idx)
+
+                if (!check_zeroq(bigrow-1, N)) || (!check_zeroq(bigcol-1, N))
+                    continue
+                else
+                    bigrow_idx = findfirst(x -> x == bigrow, zero_q_list)
+                    bigcol_idx = findfirst(x -> x == bigcol, zero_q_list)
+                    res[row, col] += rho_m[bigrow_idx, bigcol_idx]
+                end
+
+            end
+                
+        end
+
+    end
+
+    evals, _ = eigen(res)
+
+    ee2 = sum(-real(eval)*log(real(eval)) for eval in evals if real(eval) >= tol)
+
+    return ee2
+
+end
+
+function swap(i, j, N)
+
+    res = sparse(I, 2^N, 2^N)
+
+    idx1 = min(i, j)
+    idx2 = max(i, j)
+
+    local_swap = sparse([[1 0 0 0]; [0 0 1 0]; [0 1 0 0]; [0 0 0 1]])
+    full_swap(idx) = my_kron(sparse(I, 2^(idx-1), 2^(idx-1)), my_kron(local_swap, sparse(I, 2^(N-idx-1), 2^(N-idx-1))))
+
+    for k in idx1:idx2-1
+
+        res *= full_swap(k)
+
+    end
+
+    if idx2-idx1 > 1
+
+        for k in reverse(idx1:idx2-2)
+
+            res *= full_swap(k)
+
+        end
+
+    end
+
+    return res
+
+end
+
+function get_CP_operator_sparse(N)
+
+    x(idx) = get_op(["X"], [idx], N)
+
+    res = sparse(I, 2^N, 2^N)
+
+    for j in 1:div(N, 2)
+
+        res *= x(j)*x(N+1-j)*swap(j, N+1-j, N)
+
+    end
+
+    return res
+
+end
+
+function decimal_to_padded_binary_list(decimal, bit_length)
+    binary_list = Int[]
+
+    while decimal > 0 || length(binary_list) < bit_length
+        pushfirst!(binary_list, (decimal % 2) + 1)
+        decimal = div(decimal, 2)
+    end
+
+    # Pad with leading zeros if needed
+    while length(binary_list) < bit_length
+        pushfirst!(binary_list, 0)
+    end
+
+    return binary_list 
+end
+
+function mps_to_list(mps)
+    
+    res = []
+    tmp = contract(mps)
+    N = length(mps)
+    for i in 1:2^N
+        # Convert a decimal into a list of integers that represent the number in binary 
+        # (instead of 0 and 1 we have 1 and 2 in this list to fit with Julia)
+        binary_list = decimal_to_padded_binary_list(i-1, N) 
+        push!(res, tmp[binary_list...])
+    end
+    return res
+
+end
+
+function get_charge_config_sparse(s)
+
+    config = []
+
+    q_n(n) = (get_op(["Z"], [n], N) + (-1)^(n-1)*sparse(I, 2^N, 2^N))*0.5
+
+    for i in 1:N
+
+        push!(config, s'*q_n(i)*s)
+
+    end
+
+    return config
 
 end
