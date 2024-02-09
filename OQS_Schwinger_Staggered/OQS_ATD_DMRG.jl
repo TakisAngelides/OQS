@@ -200,6 +200,7 @@ function run_ATDDMRG()
         evolution_operator = exp(Matrix(L)*tau)
         
         # Prepare the list to store the tracked observables and get the initial state values
+        rhodim = Int(binomial(N, div(N, 2)))
         ee_list_sparse = [get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim))]
         z_list_sparse = [[] for _ in 1:N]
         for idx in 1:N

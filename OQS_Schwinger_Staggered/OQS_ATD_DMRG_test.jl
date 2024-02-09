@@ -10,8 +10,8 @@ using OpenQuantumTools
 include("Utilities.jl")
 
 N = 4
-tau = 0.001 # time step in time evolution rho -> exp(-tau L) after one step
-cutoff = 1e-20 # cutoff for SVD
+tau = 0.01 # time step in time evolution rho -> exp(-tau L) after one step
+cutoff = 1e-6 # cutoff for SVD
 tol = 1e-9 # tolerance for DMRG convergence and ATDDMRG convergence
 e = 0.8
 x = 1/e^2
@@ -161,6 +161,7 @@ function run_ATDDMRG()
     evolution_operator = exp(Matrix(L)*tau)
     
     # Prepare the list to store the tracked observables and get the initial state values
+    rhodim = Int(binomial(N, div(N, 2)))
     ee_list_sparse = [get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim))]
     z_list_sparse = [[] for _ in 1:N]
     for idx in 1:N
@@ -180,10 +181,6 @@ function run_ATDDMRG()
         end
         
     end
-
-    # p1 = plot(step_num_list, max_bond_list)
-    # title!("Maximum Bond Dimension")
-    # display(p1)
     
     p2 = plot(step_num_list, ee_list, label = "MPO")
     plot!(step_num_list, ee_list_sparse, label = "Sparse")
@@ -194,15 +191,6 @@ function run_ATDDMRG()
     plot!(step_num_list, z_list_sparse[div(N, 2)], label = "Sparse, $(div(N, 2))", linestyle = :dash)
     title!("Middle Z Operator Expectation Value")
     display(p3)
-
-    # norm_diff = []
-    # for (idx, element) in enumerate(max_imag)
-    #     push!(norm_diff, norm(element - max_imag_sp[idx]))
-    #     # println(idx, ": ", norm(element - max_imag_sp[idx]))
-    # end
-
-    # p4 = plot(norm_diff)
-    # display(p4)
 
 end
 
