@@ -84,7 +84,7 @@ function run_ATDDMRG()
     ee_list = Float64[]
     step_num_list = Int[]
     z_mpo = [MPO(get_Z_site_operator(idx), sites) for idx in 1:N]
-    z_list = [[] for _ 1:N]
+    z_list = [[] for _ in 1:N]
 
     # Push into the lists the initial state observables
     push!(step_num_list, 0)
