@@ -83,13 +83,15 @@ function run_ATDDMRG()
     max_bond_list = Int[]
     ee_list = Float64[]
     step_num_list = Int[]
-    z_middle_mpo = MPO(get_Z_site_operator(div(N, 2)), sites)
-    z_middle_list = Float64[]
+    z_mpo = [MPO(get_Z_site_operator(idx), sites) for idx in 1:N]
+    z_list = [[] for _ 1:N]
 
     # Push into the lists the initial state observables
     push!(step_num_list, 0)
     push!(max_bond_list, maxlinkdim(rho))
-    push!(z_middle_list, real(tr(apply(rho, z_middle_mpo))))
+    for idx in 1:N
+        push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
+    end
     push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
     
     # Write initial state to file and print statements
@@ -158,7 +160,9 @@ function run_ATDDMRG()
             # Measure the observables
             push!(step_num_list, step)
             push!(max_bond_list, maxlinkdim(rho))
-            push!(z_middle_list, real(tr(apply(rho, z_middle_mpo))))
+            for idx in 1:N
+                push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
+            end
             push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
             
             # Write the state to file
@@ -176,6 +180,9 @@ function run_ATDDMRG()
     # Write observable lists to file
     write(file, "step_num_list", step_num_list)
     write(file, "max_bond_list", max_bond_list)
+    for idx in 1:N
+        write(file, "z_list_$(idx)", z_list[idx])
+    end
     write(file, "z_middle_list", z_middle_list)
     write(file, "ee_list", ee_list)
 
@@ -183,19 +190,22 @@ function run_ATDDMRG()
     if (sparse_evol) && (h5_previous_path == "None")
 
         # Prepare the initial state and the Z observable at the middle of the lattice to be tracked
-        z_op = get_op(["Z"], [div(N, 2)], N)
+        z_op = [project_zeroq(get_op(["Z"], [idx], N)) for idx in 1:N]
         rho = outer(gs', gs)
         rho_m = mpo_to_matrix(rho)
         rho_v = reshape(rho_m, length(rho_m))
 
         # Get the Lindblad operator and its exponential which is the evolution operator
-        L = get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+        L = get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
         evolution_operator = exp(Matrix(L)*tau)
         
         # Prepare the list to store the tracked observables and get the initial state values
-        ee_list_sparse = [get_entanglement_entropy_matrix(N, reshape(rho_v, 2^N, 2^N), 1:div(N, 2))]
-        z_middle_list_sparse = [real(tr(rho_m*z_op))]
-
+        ee_list_sparse = [get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim))]
+        z_list_sparse = [[] for _ in 1:N]
+        for idx in 1:N
+            push!(z_list_sparse[idx], real(tr(rho_m*z_op[idx])))
+        end
+        
         # Do the evolution
         for _ in 1:max_steps
 
@@ -203,14 +213,18 @@ function run_ATDDMRG()
             rho_v = evolution_operator*rho_v
 
             # Measure tracked observables
-            push!(ee_list_sparse, get_entanglement_entropy_matrix(N, reshape(rho_v, 2^N, 2^N), 1:div(N, 2)))
-            push!(z_middle_list_sparse, real(tr(reshape(rho_v, (2^N, 2^N))*z_op)))
+            push!(ee_list_sparse, get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim)))
+            for idx in 1:N
+                push!(z_list_sparse[idx], real(tr(reshape(rho_v, (rhodim, rhodim))*z_op[idx])))
+            end
             
         end
 
         # Write the sparse observable lists to file
         write(file, "ee_list_sparse", ee_list_sparse)
-        write(file, "z_middle_list_sparse", z_middle_list_sparse)
+        for idx in 1:N
+            write(file, "z_list_sparse_$(idx)", z_list_sparse[idx])
+        end
 
     end
 

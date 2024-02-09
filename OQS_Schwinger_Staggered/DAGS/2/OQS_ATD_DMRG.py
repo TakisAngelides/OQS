@@ -208,5 +208,5 @@ def make_plots():
     #                 plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_tau/N_{N}_x_{x}_l_0_{l_0}_mg_{mg}.png', bbox_inches = 'tight')
     #                 plt.close()
                                                             
-# write_dag()
-make_plots()
+write_dag()
+# make_plots()
