@@ -154,6 +154,7 @@ function run_ATDDMRG()
     z_op = [project_zeroq(get_op(["Z"], [idx], N)) for idx in 1:N]
     rho = outer(gs', gs)
     rho_m = mpo_to_matrix(rho)
+    rho_m = project_zeroq(rho_m)
     rho_v = reshape(rho_m, length(rho_m))
 
     # Get the Lindblad operator and its exponential which is the evolution operator
