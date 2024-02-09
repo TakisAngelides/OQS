@@ -25,7 +25,7 @@ beta = 1/aT
 sigma_over_a = 3.0
 env_corr_type = "delta"
 max_sweeps = 1000
-max_steps = 20
+max_steps = 3
 measure_every = 1 # this determines how often to save rho and measure the energy in ATDDMRG
 
 function run_ATDDMRG()
@@ -41,13 +41,7 @@ function run_ATDDMRG()
     sweeps = Sweeps(max_steps; maxdim = D)
     observer = DMRGObserver(;energy_tol = tol)
     gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true)
-    
-    # test
-    opsum = OpSum()
-    opsum += "X",1
-    opsum = MPO(opsum, sites) 
-    gs = apply(opsum, gs) 
-    
+        
     rho = outer(gs', gs)
     println("The ground state energy was found to be $(gs_energy)\n")
     L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
@@ -62,27 +56,23 @@ function run_ATDDMRG()
     odd_gates = get_exp_Ho_list(sites, -1im*tau) # odd
     even_gates = get_exp_He_list(sites, -1im*tau) # even
 
+    # Prepare the lists for the tracked observables and the associated MPO
     max_bond_list = Int[]
     ee_list = Float64[]
     step_num_list = Int[]
-    z_middle_list = Float64[]
+    z_mpo = [MPO(get_Z_site_operator(idx), sites) for idx in 1:N]
+    z_list = [[] for _ 1:N]
 
+    # Push into the lists the initial state observables
     push!(step_num_list, 0)
     push!(max_bond_list, maxlinkdim(rho))
-    z_middle_mpo = MPO(get_Z_site_operator(div(N, 2)), sites)
-    push!(z_middle_list, real(tr(apply(rho, z_middle_mpo))))
-    # rho_m = mpo_to_matrix(rho)
-    # rho_v = reshape(rho_m, length(rho_m))
-    # max_imag = []
-    # display(rho_v)
-    # println(maximum(imag(rho_v)))
-    # push!(max_imag, maximum(imag(rho_v)))
-    # push!(ee_list, get_entanglement_entropy_vector(rho_v, 1:N, tuple(fill(2, 2*N)...))[1])
+    for idx in 1:N
+        push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
+    end
     push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
     
+    # Print statements
     println("The time to get the initial rho and MPO lists is: $(time() - t)\n")
-    flush(stdout)
-    
     println("Now starting the ATDDMRG algorithm\n")
     flush(stdout)
 
@@ -136,30 +126,23 @@ function run_ATDDMRG()
 
         end
 
+        # Take care of hermiticity and positivity of the density matrix
         rho = add(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff)/2 # fix hermiticity with rho -> rho dagger + rho over 2
         rho = apply(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff) # fix positivity with rho beta = rho beta over 2 dagger times rho beta over 2 - this results in a right canonical form MPO
         rho = rho/tr(rho)
         
-        if step % measure_every == 0
+        if (step % measure_every == 0) || (step == max_steps)
 
+            # Measure the observables
             push!(step_num_list, step)
             push!(max_bond_list, maxlinkdim(rho))
-            push!(z_middle_list, real(tr(apply(rho, z_middle_mpo))))
-            # rho_m = mpo_to_matrix(rho)
-            # rho_v = reshape(rho_m, length(rho_m))
-            # display(rho_v)
-            # println(maximum(imag(rho_v)))
-            # push!(max_imag, rho_v)
-            # push!(max_imag, maximum(imag(rho_v)))
-            # push!(ee_list, get_entanglement_entropy_vector(rho_v, 1:N, tuple(fill(2, 2*N)...))[1])
+            for idx in 1:N
+                push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
+            end
             push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
-            println("Step: $step, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)\n")
-            
-            # Test
-            # L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
-            # L_taylor_expectation_value = real(inner(L_taylor_expanded_part_tmp, rho))
-            # println("The expectation value of the taylor expanded part of the Lindblad operator is $(L_taylor_expectation_value*tau/2)\n")
-            
+
+            # Refresh time variable and print statement
+            println("Step: $step, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)\n")            
             flush(stdout)
             t = time()
 
@@ -167,37 +150,35 @@ function run_ATDDMRG()
 
     end
 
-    # max_imag_sp = []
-    # z_middle_sparse = get_op(["Z"], [div(N, 2)], N)
-    z_ops = [get_op(["Z"], [idx], N) for idx in 1:N]
-    z_ops_exp_val = [[] for _ in 1:N]
+    # Prepare the initial state and the Z observable at the middle of the lattice to be tracked
+    z_op = [project_zeroq(get_op(["Z"], [idx], N)) for idx in 1:N]
     rho = outer(gs', gs)
     rho_m = mpo_to_matrix(rho)
     rho_v = reshape(rho_m, length(rho_m))
-    # display(rho_v) 
-    # println(maximum(imag(rho_v)))
-    # push!(max_imag_sp, rho_v)
-    # push!(max_imag_sp, maximum(imag(rho_v)))
-    L = get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+
+    # Get the Lindblad operator and its exponential which is the evolution operator
+    L = get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
     evolution_operator = exp(Matrix(L)*tau)
-    ee_list_sparse = [get_entanglement_entropy_matrix(N, reshape(rho_v, 2^N, 2^N), 1:div(N, 2))]
-    # z_middle_list_sparse = [real(tr(rho_m*z_middle_sparse))]
+    
+    # Prepare the list to store the tracked observables and get the initial state values
+    ee_list_sparse = [get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim))]
+    z_list_sparse = [[] for _ in 1:N]
     for idx in 1:N
-        push!(z_ops_exp_val[idx], real(tr(rho_m*z_ops[idx])))
+        push!(z_list_sparse[idx], real(tr(rho_m*z_op[idx])))
     end
-    for i in 1:max_steps
-        println("For sparse evolution: step $(i)")
+    
+    # Do the evolution
+    for _ in 1:max_steps
+
+        # One time step evolution
         rho_v = evolution_operator*rho_v
-        # display(rho_v)
-        # println(maximum(imag(rho_v)))
-        # push!(max_imag_sp, rho_v)
-        # push!(max_imag_sp, maximum(imag(rho_v)))
-        push!(ee_list_sparse, get_entanglement_entropy_matrix(N, reshape(rho_v, 2^N, 2^N), 1:div(N, 2)))
-        # push!(z_middle_list_sparse, real(tr(reshape(rho_v, (2^N, 2^N))*z_middle_sparse)))
-        rho_m = reshape(rho_v, (2^N, 2^N))
+
+        # Measure tracked observables
+        push!(ee_list_sparse, get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim)))
         for idx in 1:N
-            push!(z_ops_exp_val[idx], real(tr(rho_m*z_ops[idx])))
+            push!(z_list_sparse[idx], real(tr(reshape(rho_v, (rhodim, rhodim))*z_op[idx])))
         end
+        
     end
 
     # p1 = plot(step_num_list, max_bond_list)
@@ -209,11 +190,8 @@ function run_ATDDMRG()
     title!("Entanglement Entropy")
     display(p2)
 
-    p3 = plot(step_num_list, z_middle_list, label = "MPO, $(div(N, 2))")
-    # plot!(step_num_list, z_middle_list_sparse, label = "Sparse")
-    for idx in [div(N,2)]
-        plot!(step_num_list, z_ops_exp_val[idx], label = "Sparse, $(idx)", linestyle = :dash)
-    end
+    p3 = plot(step_num_list, z_list[div(N, 2)], label = "MPO, $(div(N, 2))")
+    plot!(step_num_list, z_list_sparse[div(N, 2)], label = "Sparse, $(div(N, 2))", linestyle = :dash)
     title!("Middle Z Operator Expectation Value")
     display(p3)
 
