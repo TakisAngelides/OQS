@@ -1255,7 +1255,7 @@ function apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over
 
     tmp = 0.5*1im*tau*H_T
 
-    # rho + rho * idt/2 H_T * rho - idt/2 H_T * rho = ()
+    # rho + rho * idt/2 H_T * rho - idt/2 H_T * rho
     rho_final = rho + apply(rho, tmp; cutoff = cutoff) - apply(tmp, rho; cutoff = cutoff)
 
     # second order term in the taylor expansion only for the Hamiltonian part
@@ -1348,7 +1348,7 @@ function project_zeroq(M)
         else
             row_count += 1
         end
-
+        # println(row_count, " ", digits(row-1, base = 2, pad = 4))
         col_count = 0
         for col in 1:ncol
 
@@ -1409,16 +1409,15 @@ function get_entanglement_entropy_reduced_matrix(N, rho_m; tol = 1e-12)
     
     res = zeros(ComplexF64, dimres, dimres)
 
-    zero_q_list = [i for i in 1:2^N if check_zeroq(i-1, N)]
+    zero_q_list = [i for i in reverse(1:2^N) if check_zeroq(i-1, N)] 
 
     for row in 1:dimres
-
         for col in 1:dimres
 
-            for trace_idx in 1:dimres
+            for trace_idx in 1:dimres 
 
-                bigrow = parse(Int, join(vcat(digits(row-1, base=2, pad = div(N,2)) |> reverse, digits(trace_idx-1, base=2, pad = div(N,2)) |> reverse)), base = 2) # this is bin(row)bin(trace_idx)
-                bigcol = parse(Int, join(vcat(digits(col-1, base=2, pad = div(N,2)) |> reverse, digits(trace_idx-1, base=2, pad = div(N,2)) |> reverse)), base = 2) # this is bin(col)bin(trace_idx)
+                bigrow = parse(Int, join(vcat(digits(row-1, base=2, pad = div(N,2)), digits(trace_idx-1, base=2, pad = div(N,2)))) |> reverse, base = 2) # this is bin(trace_idx))bin(row)
+                bigcol = parse(Int, join(vcat(digits(col-1, base=2, pad = div(N,2)), digits(trace_idx-1, base=2, pad = div(N,2)))) |> reverse, base = 2) # this is bin(trace_idx))bin(col)
 
                 if (!check_zeroq(bigrow-1, N)) || (!check_zeroq(bigcol-1, N))
                     continue
