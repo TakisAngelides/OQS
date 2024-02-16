@@ -11,24 +11,24 @@ file_to_run = 'OQS_ATD_DMRG.jl'
 name_of_dag = 'OQS_ATD_DMRG'
 
 N_list = [4]
-tau_list = [10**(-pow) for pow in [4, 5]] # time step size
+tau_list = [10**(-pow) for pow in [1]] # time step size
 tau_previous_list = [0] + tau_list[:-1] # this can be left untouched
+max_steps_list = [1000] # how many ATDDMRG time steps to do 
 cutoff_list = [0] # this is for compression after gate application
+l_0_list = [0.45]
 tol_list = [1E-16] # tol for dmrg stopping condition
 x_list = [np.round(1/0.8**2, 6)]
-l_0_list = [0.45]
 ma_list = [0.5]
-max_steps_list = [3] # how many ATDDMRG time steps to do 
 measure_every_list = [1] # how often to measure observables and store the density matrix
 D_list = [1000] # anyway the dmrg will stop from tol
 lambd_list = [0.0]
 aD_0_list = [1.0]
 aT_list = [10.0]
 sigma_over_a_list = [3.0]
-env_corr_type_list = ["delta"]
+env_corr_type_list = ["delta", "constant"]
 max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
 l_0_initial_state = 0.0
-project_number = 2 # <==================================== Important to change according to which project file ================================
+project_number = 3 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
 
@@ -68,7 +68,7 @@ def write_dag():
                                                 for sigma_over_a in sigma_over_a_list:
                                                     for env_corr_type in env_corr_type_list:
                                                         for max_sweeps in max_sweeps_list:
-                                                            sparse_evol = "true" if (max(N_list) < 8) and (tau_idx == 0) else "false"
+                                                            sparse_evol = "true" if (max(N_list) < 8) else "false"
                                                             for ma in ma_list:
                                                                 for max_steps_idx, max_steps in enumerate(max_steps_list):
                                                                     
@@ -159,6 +159,7 @@ def make_plots():
         plt.close()
         
         plt.plot(step_num_list, ee_list)
+        print(f'{env}, {ee_list[-1]}')
         plt.ylabel('Entanglement Entropy')
         plt.xlabel('Iteration')
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
@@ -209,5 +210,5 @@ def make_plots():
     #                 plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_tau/N_{N}_x_{x}_l_0_{l_0}_mg_{mg}.png', bbox_inches = 'tight')
     #                 plt.close()
                                                             
-write_dag()
-# make_plots()
+# write_dag()
+make_plots()

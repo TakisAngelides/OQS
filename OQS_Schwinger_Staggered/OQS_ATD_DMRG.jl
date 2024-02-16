@@ -30,7 +30,7 @@ sigma_over_a = parse(Float64, ARGS[17])
 env_corr_type = ARGS[18]
 max_sweeps = parse(Int, ARGS[19])
 sparse_evol = parse(Bool, ARGS[20])
-l_0_initial_state = parse(Float, ARGS[21])
+l_0_initial_state = parse(Float64, ARGS[21])
 
 function run_ATDDMRG()
 
@@ -88,7 +88,7 @@ function run_ATDDMRG()
     end
     step_num_list = Int[]
     z_mpo = [MPO(get_Z_site_operator(idx), sites) for idx in 1:N]
-    z_list = [[] for _ in 1:N]
+    z_list = [Float64[] for _ in 1:N]
 
     # Push into the lists the initial state observables
     push!(step_num_list, 0)
@@ -188,23 +188,24 @@ function run_ATDDMRG()
             println("Initializing with the MPO corresponding to the ground state of H_system for the sparse evolution\n")
             flush(stdout)
             rho_sparse_inital = rho_initial
-
+            rho_matrix = mpo_to_matrix(rho_sparse_inital)
+            rho_zeroq_subspace_matrix = project_zeroq(rho_matrix)
+            rho_v = reshape(rho_zeroq_subspace_matrix, length(rho_zeroq_subspace_matrix))
+            
         else 
 
             # This is the case when the time step has decreased but continues evolving a given state from a larger time step
             println("Initializing the sparse initial rho_v from h5_previous_path = $(h5_previous_path)\n")
             flush(stdout)
             previous_file = h5open(h5_previous_path, "r")
-            rho_sparse_inital = read(previous_file, "last_rho_v")
+            rho_v = read(previous_file, "last_sparse_v")
+            rho_zeroq_subspace_matrix = reshape(rho_v, rhodim, rhodim)
         
         end
 
         # Prepare the initial state and the Z observable at the middle of the lattice to be tracked
         z_op = [project_zeroq(get_op(["Z"], [idx], N)) for idx in 1:N]
-        rho_matrix = mpo_to_matrix(rho_sparse_inital)
-        rho_zeroq_subspace_matrix = project_zeroq(rho_matrix)
-        rho_v = reshape(rho_zeroq_subspace_matrix, length(rho_m))
-
+        
         # Get the Lindblad operator and its exponential which is the evolution operator
         L = get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
         evolution_operator = exp(Matrix(L)*tau)
@@ -212,11 +213,11 @@ function run_ATDDMRG()
         # Prepare the list to store the tracked observables and get the initial state values
         rhodim = Int(binomial(N, div(N, 2)))
         if N <= 8
-            ee_list_sparse = [get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim))]
+            ee_list_sparse = [get_entanglement_entropy_reduced_matrix(N, rho_zeroq_subspace_matrix)]
         end
-        z_list_sparse = [[] for _ in 1:N]
+        z_list_sparse = [Float64[] for _ in 1:N]
         for idx in 1:N
-            push!(z_list_sparse[idx], real(tr(rho_m*z_op[idx])))
+            push!(z_list_sparse[idx], real(tr(rho_zeroq_subspace_matrix*z_op[idx])))
         end
         
         # Do the evolution
@@ -226,11 +227,12 @@ function run_ATDDMRG()
             rho_v = evolution_operator*rho_v
 
             # Measure tracked observables
+            rho_zeroq_subspace_matrix = reshape(rho_v, rhodim, rhodim)
             if N <= 8
-                push!(ee_list_sparse, get_entanglement_entropy_reduced_matrix(N, reshape(rho_v, rhodim, rhodim)))
+                push!(ee_list_sparse, get_entanglement_entropy_reduced_matrix(N, rho_zeroq_subspace_matrix))
             end
             for idx in 1:N
-                push!(z_list_sparse[idx], real(tr(reshape(rho_v, (rhodim, rhodim))*z_op[idx])))
+                push!(z_list_sparse[idx], real(tr(rho_zeroq_subspace_matrix*z_op[idx])))
             end
             
         end
@@ -242,7 +244,7 @@ function run_ATDDMRG()
         for idx in 1:N
             write(file, "z_list_sparse_$(idx)", z_list_sparse[idx])
         end
-        write(file, "last_rho_v", rho_v)
+        write(file, "last_sparse_v", rho_v)
 
     end
 

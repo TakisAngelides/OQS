@@ -4,4 +4,4 @@ Testing to see if the pipeline works
 
 2
 
-Comparing sparse with MPO for N = 8
+Comparing sparse with MPO for N = 4
