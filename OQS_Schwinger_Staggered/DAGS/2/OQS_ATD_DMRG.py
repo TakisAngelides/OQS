@@ -27,6 +27,7 @@ aT_list = [10.0]
 sigma_over_a_list = [3.0]
 env_corr_type_list = ["delta"]
 max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
+l_0_initial_state = 0.0
 project_number = 2 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
@@ -76,8 +77,8 @@ def write_dag():
                                                                     if tau_idx == 0:
                                                                         h5_previous_path = 'None'
                                                                     else:
-                                                                        h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}.h5'
-                                                                    h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}.h5'
+                                                                        h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}_l0init_{l_0_initial_state}.h5'
+                                                                    h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}_l0init_{l_0_initial_state}.h5'
                                                                     
                                                                     tau_text = str(tau).replace('.', '')
                                                                     x_text = str(x).replace('.', '')
@@ -87,22 +88,23 @@ def write_dag():
                                                                     aT_text = str(aT).replace('.', '')
                                                                     lambd_text = str(lambd).replace('.', '')
                                                                     aD_0_text = str(aD_0).replace('.', '')
+                                                                    l_0_initial_state_text = str(l_0_initial_state).replace('.', '')
                                                                     
-                                                                    job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}'
+                                                                    job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}'
                                                                     f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
-                                                                    f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}"\n')
+                                                                    f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}"\n')
                                                                     # f.write('RETRY ' + job_name + ' 3\n')
                                                                     
                                                                     if tau_idx != 0:
                                                                         
                                                                         tau_previous_text = str(tau_previous).replace('.', '')
-                                                                        previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}'
+                                                                        previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}'
                                                                         f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
 
 
 def make_plots():
     
-    columns = ['N', 'x', 'ma', 'l_0', 'tau', 'env', 'sig', 'aT', 'lam', 'aD_0', 'step', 'D', 'ee', 'z_mid']
+    columns = ['N', 'x', 'ma', 'l_0_init', 'l_0', 'tau', 'env', 'sig', 'aT', 'lam', 'aD_0', 'step', 'D', 'ee', 'z_mid']
     df = pd.DataFrame(columns = columns)
     df_sparse = pd.DataFrame(columns = columns)
     
@@ -120,7 +122,7 @@ def make_plots():
             file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
             
             row = filepath[:-3].strip().split('_')
-            N, tau, x, l_0, ma, env, sig, aT, lam, aD_0 = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19] 
+            N, tau, x, l_0, ma, env, sig, aT, lam, aD_0, l_0_init = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19], row[21] 
             N = int(N)
             tau = float(tau)
             x = float(x)
@@ -130,6 +132,7 @@ def make_plots():
             aT = float(aT)
             lam = float(lam)
             aD_0 = float(aD_0)
+            l_0_init = float(l_0_init)
                     
             max_bond_list = file['max_bond_list'][()]
             step_num_list = file['step_num_list'][()]
@@ -173,7 +176,7 @@ def make_plots():
         for i in range(len(step_num_list)):
             
             step, z_mid, D, ee = step_num_list[i], z_middle_list[i], max_bond_list[i], ee_list[i]
-            new_row = pd.DataFrame([[N, x, ma, l_0, tau, env, sig, aT, lam, aD_0, step, D, ee, z_mid]], columns = df.columns)
+            new_row = pd.DataFrame([[N, x, ma, l_0_init, l_0, tau, env, sig, aT, lam, aD_0, step, D, ee, z_mid]], columns = df.columns)
             df = pd.concat([df, new_row], ignore_index = True)
             
         

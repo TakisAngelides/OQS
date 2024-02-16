@@ -229,21 +229,24 @@ function get_which_canonical_form(mps)
 
 end
 
-function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-9)
+function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-20)
 
     N = length(mpo)
 
     for (idx, gate) in enumerate(Ho_mpo_list)
 
+        # idx will be 1, 2, 3, ... and we set it below to the left index of the gate to be applied 1, 3, 5, ... 
         idx = 2*idx-1
 
-        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*conj(gate), 3 => 1)
+        # println("Odd gate left index is $(idx) and the MPO canonical form is ", get_MPO_canonical_form(mpo))
+
+        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*hermitian_conjugate_mpo(gate), 3 => 1)
 
         U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
         
         mpo[idx] = U
 
-        S = S/norm(S)
+        # S = S/norm(S)
         
         mpo[idx+1] = S*V
 
@@ -258,7 +261,7 @@ function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-9)
         
             mpo[idx] = U
 
-            S = S/norm(S)
+            # S = S/norm(S)
         
             mpo[idx+1] = S*V
         
@@ -268,7 +271,7 @@ function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-9)
 
 end
 
-function apply_even!(He_mpo_list, mpo; cutoff = 1e-9)
+function apply_even!(He_mpo_list, mpo; cutoff = 1e-20)
 
     """
     After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
@@ -277,20 +280,22 @@ function apply_even!(He_mpo_list, mpo; cutoff = 1e-9)
 
     # mps[1], mps[2] = ITensors.qr(mps[1]*mps[2], uniqueinds(mps[1], mps[2]); positive = true, tags = "Link,l=$(1)")
     mpo[1], S, V = ITensors.svd(mpo[1]*mpo[2], commoninds(mpo[1], mpo[1]*mpo[2])..., lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)")
-    S = S/norm(S)
+    # S = S/norm(S)
     mpo[2] = S*V
 
     for (idx, gate) in enumerate(He_mpo_list)
 
         idx = 2*idx
 
-        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*conj(gate), 3 => 1)
+        # println("Even gate left index is $(idx) and the MPO canonical form is ", get_MPO_canonical_form(mpo))
 
+        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*hermitian_conjugate_mpo(gate), 3 => 1)
+        
         U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
         
         mpo[idx] = U
 
-        S = S/norm(S)
+        # S = S/norm(S)
         
         mpo[idx+1] = S*V
 
@@ -304,7 +309,7 @@ function apply_even!(He_mpo_list, mpo; cutoff = 1e-9)
     
         mpo[idx] = U
 
-        S = S/norm(S)
+        # S = S/norm(S)
     
         mpo[idx+1] = S*V
     
@@ -312,19 +317,17 @@ function apply_even!(He_mpo_list, mpo; cutoff = 1e-9)
 
 end
 
-function get_entanglement_entropy(psi, site)
+function get_entanglement_entropy(psi, site, tol = 1e-12)
     
     ITensors.orthogonalize!(psi, site)
     if site == 1
-        U,S,V = svd(psi[site], siteind(psi, site))
+        U,S,V = svd(psi[site], siteind(psi, site); cutoff = 1e-20)
     else
-        U,S,V = svd(psi[site], (linkind(psi, site-1), siteind(psi, site)))
+        U,S,V = svd(psi[site], (linkind(psi, site-1), siteind(psi, site)); cutoff = 1e-20)
     end
-    SvN = 0.0
-    for n=1:dim(S, 1)
-        p = S[n,n]^2
-        SvN -= p * log(p)
-    end
+
+    SvN = sum(-real(singular_value^2)*log(real(singular_value^2)) for singular_value in diag(S) if real(singular_value^2) >= tol)
+
     return SvN
 
 end
@@ -658,14 +661,11 @@ function get_kinetic_part_aH_Hamiltonian_sparse_matrix(N)
     eye(n::Int64) = sparse(I, n, n);
 
     Hk = spzeros(2^(N), 2^(N))
-    X = sparse(Float64[0 1; 1 0])
-    Y = sparse(ComplexF64[0 -1im; 1im 0])
-    Z = sparse(Float64[1 0; 0 -1])
 
     # Kinetic term
     for n=1:N-1
-        Hk += (1/4)*kron(eye(2^(n-1)), kron(X, kron(X, eye(2^(N-(n+1))))))
-        Hk += (1/4)*kron(eye(2^(n-1)), kron(Y, kron(Y, eye(2^(N-(n+1))))))
+        Hk += (1/4)*get_op(["X", "X"], [n, n+1], N)
+        Hk += (1/4)*get_op(["Y", "Y"], [n, n+1], N)
     end
 
     return Hk
@@ -845,7 +845,7 @@ function get_LdagL_sparse_matrix(N, n, m, aT)
 
 end
 
-function get_Lindblad_jump_operator(m, aT, sites)
+function get_Lindblad_jump_operator_old(m, aT, sites)
 
     N = length(sites)
 
@@ -869,7 +869,33 @@ function get_Lindblad_jump_operator(m, aT, sites)
 
 end
 
-function get_LdagL(n, m, aT, sites)
+function get_Lindblad_jump_operator(m, aT, sites)
+
+    N = length(sites)
+
+    opsum = OpSum()
+
+    opsum += 0.5*(-1)^m,"Z",m
+
+    opsum += 0.5*(-1)^m,"Id",1
+
+    c = (-1)^m/(8*aT)
+
+    if m != 1
+        opsum +=  c,"S-",m-1,"S+",m
+        opsum += -c,"S+",m-1,"S-",m
+    end
+    
+    if m != N
+        opsum += -c,"S-",m,"S+",m+1 
+        opsum +=  c,"S+",m,"S-",m+1
+    end
+
+    return MPO(opsum, sites)
+
+end
+
+function get_LdagL_old(n, m, aT, sites)
 
     N = length(sites)
     
@@ -933,6 +959,70 @@ function get_LdagL(n, m, aT, sites)
 
 end
 
+function get_LdagL(n, m, aT, sites)
+
+    N = length(sites)
+    
+    opsum = OpSum()
+
+    opsum += 0.25*(-1)^(n+m),"Z",n,"Z",m
+
+    opsum += 0.5*(-1)^(n+m),"Z",n
+
+    opsum += 0.25*(-1)^(n+m),"Id",1
+
+    if (n != 1)
+        opsum += (-(-1)^(n + m)/(16*aT)),"S-",n-1,"S+",n,"Z",m
+        opsum += ((-1)^(n + m)/(16*aT)),"S+",n-1,"S-",n,"Z",m
+    end
+    
+    if (n != N)
+        opsum += ((-1)^(n + m)/(16*aT)),"S-",n,"S+",n+1,"Z",m
+        opsum += (-(-1)^(n + m)/(16*aT)),"S+",n,"S-",n+1,"Z",m
+    end
+
+    if (m != 1)
+        opsum += ((-1)^(n + m)/(16*aT)),"Z",n,"S-",m-1,"S+",m
+        opsum += (-(-1)^(n + m)/(16*aT)),"Z",n,"S+",m-1,"S-",m
+    end
+    
+    if (m != N)
+        opsum += (-(-1)^(n + m)/(16*aT)),"Z",n,"S-",m,"S+",m+1
+        opsum += ((-1)^(n + m)/(16*aT)),"Z",n,"S+",m,"S-",m+1
+    end
+
+    if (n != 1) && (m != 1)
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S+",n-1,"S-",n,"S+",m-1,"S-",m
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S+",n-1,"S-",n,"S-",m-1,"S+",m
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S-",n-1,"S+",n,"S+",m-1,"S-",m
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S-",n-1,"S+",n,"S-",m-1,"S+",m
+    end
+
+    if (n != 1) && (m != N)
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S+",n-1,"S-",n,"S-",m,"S+",m+1
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S+",n-1,"S-",n,"S+",m,"S-",m+1
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S-",n-1,"S+",n,"S+",m,"S-",m+1
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S-",n-1,"S+",n,"S-",m,"S+",m+1
+    end
+
+    if (n != N) && (m != 1)
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S+",n,"S-",n+1,"S-",m-1,"S+",m
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S+",n,"S-",n+1,"S+",m-1,"S-",m
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S-",n,"S+",n+1,"S+",m-1,"S-",m
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S-",n,"S+",n+1,"S-",m-1,"S+",m
+    end
+    
+    if (n != N) && (m != N)
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S+",n,"S-",n+1,"S+",m,"S-",m+1
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S+",n,"S-",n+1,"S-",m,"S+",m+1
+        opsum += (-(-1)^(n + m)/(64*aT^2)),"S-",n,"S+",n+1,"S-",m,"S+",m+1
+        opsum += ((-1)^(n + m)/(64*aT^2)),"S-",n,"S+",n+1,"S+",m,"S-",m+1
+    end
+
+    return MPO(opsum, sites)
+
+end
+
 function hermitian_conjugate_mpo(mpo)
 
     return dag(swapprime(mpo, 0, 1))
@@ -978,8 +1068,9 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
             opsum += -1im*0.25*(1/x)*(N-m),"Z",n,"Z",m
         end
         # Kinetic term
-        opsum += -1im*0.5,"S+",n,"S-",n+1
-        opsum += -1im*0.5,"S-",n,"S+",n+1
+        opsum += -1im*0.25,"X",n,"X",n+1
+        opsum += -1im*0.25,"Y",n,"Y",n+1
+        # Single Z terms
         opsum += -1im*(1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n
         opsum += -1im*(0.5*ma*(-1)^(n-1)),"Z",n
     end
@@ -993,15 +1084,16 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
             opsum += 1im*0.25*(1/x)*(N-m),"Z",n+N,"Z",m+N
         end
         # Kinetic term
-        opsum += 1im*0.5,"S+",n+N,"S-",n+1+N
-        opsum += 1im*0.5,"S-",n+N,"S+",n+1+N
+        opsum += 1im*0.25,"X",n+N,"X",n+1+N
+        opsum += 1im*0.25,"Y",n+N,"Y",n+1+N
+        # Single Z terms
         opsum += 1im*(1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n+N
         opsum += 1im*(0.5*ma*(-1)^(n-1)),"Z",n+N
     end
     opsum += 1im*(0.5*ma*(-1)^(N-1)),"Z",N+N
     opsum += 1im*((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1+N
 
-    h1 = MPO(opsum, sites)
+    h1 = MPO(opsum, sites; cutoff = 1e-20)
 
     for n=1:N
         for m=1:N
@@ -1018,7 +1110,8 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
                 opsum += (-1im*(-1)^m/(16*aT)),"X",m,"Y",m+1 
                 opsum += ( 1im*(-1)^m/(16*aT)),"Y",m,"X",m+1
             end 
-            h2 = MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites)
+            h2 = MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites; cutoff = 1e-20)
+            
             opsum = OpSum()
             opsum += 0.5*(-1)^n,"Z",n+N
             opsum += 0.5*(-1)^n,"Id",1
@@ -1030,10 +1123,10 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
                 opsum += ( 1im*(-1)^n/(16*aT)),"X",n,"Y",n+N+1 
                 opsum += (-1im*(-1)^n/(16*aT)),"Y",n,"X",n+N+1
             end 
-            h3 = MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites)
+            h3 = hermitian_conjugate_mpo(MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites; cutoff = 1e-20))
             h1 += apply(h2, h3, cutoff = 1e-20)
             
-            # # # The Ldag_n_L_m_left
+            # The Ldag_n_L_m_left
             opsum = OpSum()
             opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n,"Z",m
             opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n
@@ -1079,7 +1172,7 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
                 opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m,"X",m+1
             end
             
-            # # The Ldag_n_L_m_right
+            # The Ldag_n_L_m_right
             opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n+N,"Z",m+N
             opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n+N
             opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Id",1+N
@@ -1123,7 +1216,7 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
                 opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m+N,"Y",m+1+N
                 opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m+N,"X",m+1+N
             end
-            h1 += MPO(opsum, sites)
+            h1 += MPO(opsum, sites; cutoff = 1e-20)
 
         end
     end
@@ -1186,7 +1279,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
 
             tmp3 = tmp1' * tmp2 # the dash is the dagger
             
-            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((kron(tmp2, conj(tmp1))) - 0.5*(kron(tmp3, eye(2^N))) -0.5*(kron(eye(2^N), transpose(tmp3))))
+            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((kron(tmp2, transpose(tmp1'))) - 0.5*(kron(tmp3, eye(2^N))) -0.5*(kron(eye(2^N), transpose(tmp3))))
 
         end
     end
@@ -1249,41 +1342,50 @@ function apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over
 
     H_T = get_H_taylor(sites, x, l_0, ma)
 
-    # tmp1 = MPO(sites, "Id") + 0.5*1im*tau*H_T
-    # tmp2 = MPO(sites, "Id") - 0.5*1im*tau*H_T
-    # rho = apply(apply(tmp2, rho; cutoff = cutoff), tmp1; cutoff = cutoff)
-
-    tmp = 0.5*1im*tau*H_T
+    tmp = -0.5*1im*tau*H_T
 
     # rho + rho * idt/2 H_T * rho - idt/2 H_T * rho
-    rho_final = rho + apply(rho, tmp; cutoff = cutoff) - apply(tmp, rho; cutoff = cutoff)
+    rho_final = rho + apply(rho, hermitian_conjugate_mpo(tmp); cutoff = cutoff) + apply(tmp, rho; cutoff = cutoff)
 
     # second order term in the taylor expansion only for the Hamiltonian part
     # rho_final += (-tau^2/8)*apply(H_T, apply(H_T, rho; cutoff = cutoff); cutoff = cutoff) + (-tau^2/8)*apply(rho, apply(H_T, H_T; cutoff = cutoff); cutoff = cutoff) + (tau^2/4)*apply(H_T, apply(rho, H_T; cutoff = cutoff); cutoff = cutoff)
 
-    # - 0.5 * dt * 0.5 * L_n^\dagger L_m
-    LdagnLm = -0.5 * tau * 0.5 * get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
+    if aD_0 != 0
 
-    # sum over n and m: - 0.5 * dt/2 * L_n^\dagger L_m * rho
-    rho_final += apply(LdagnLm, rho; cutoff = cutoff) 
-    
-    # sum over n and m: - 0.5 * dt/2 * rho * L_n^\dagger L_m 
-    rho_final += apply(rho, LdagnLm; cutoff = cutoff) 
+        # - 0.5 * dt * 0.5 * L_n^\dagger L_m
+        LdagnLm = -0.5 * tau * 0.5 * get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
 
-    # sum over n and m: aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
-    for n=1:N
-        for m=1:N
+        # sum over n and m: - 0.5 * dt/2 * L_n^\dagger L_m * rho
+        rho_final += apply(LdagnLm, rho; cutoff = cutoff) 
+        
+        # sum over n and m: - 0.5 * dt/2 * rho * L_n^\dagger L_m 
+        rho_final += apply(rho, LdagnLm; cutoff = cutoff) 
 
-            # aD_0 * f(a(n-m)) * L_m
-            Lm = 0.5 * tau * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * get_Lindblad_jump_operator(m, aT, sites)
+        # sum over n and m: aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
+        for n=1:N
+            for m=1:N
 
-            # L_n^\dagger (we only conjugate and not transpose cause we will apply it on the right of rho anyway)
-            Ldagn = conj(get_Lindblad_jump_operator(n, aT, sites))
+                if env_corr_type == "delta" && (n != m)
 
-            # 0.5 * dt * aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
-            rho_final += apply(apply(Lm, rho; cutoff = cutoff), Ldagn; cutoff = cutoff)
-    
+                    continue
+                
+                else
+
+                    # aD_0 * f(a(n-m)) * L_m
+                    Lm = 0.5 * tau * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * get_Lindblad_jump_operator(m, aT, sites)
+
+                    # L_n^\dagger 
+                    Ldagn = hermitian_conjugate_mpo(get_Lindblad_jump_operator(n, aT, sites))
+
+                    # 0.5 * dt * aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
+                    Lmrho = apply(Lm, rho; cutoff = cutoff)
+                    rho_final += apply(Lmrho, Ldagn; cutoff = cutoff)
+
+                end
+        
+            end
         end
+
     end
 
     return rho_final
@@ -1356,6 +1458,7 @@ function project_zeroq(M)
                 continue
             else
                 col_count += 1
+                # println("row_count, col_count: ", (row_count, col_count), ", row, col: ", (digits(row-1, base = 2, pad = n), digits(col-1, base = 2, pad = n)))
                 res[row_count, col_count] = M[row, col]
             end
 
@@ -1409,21 +1512,23 @@ function get_entanglement_entropy_reduced_matrix(N, rho_m; tol = 1e-12)
     
     res = zeros(ComplexF64, dimres, dimres)
 
-    zero_q_list = [i for i in reverse(1:2^N) if check_zeroq(i-1, N)] 
+    zero_q_list = [join(digits(i-1, base = 2, pad = N)) for i in 1:2^N if check_zeroq(i-1, N)] 
 
     for row in 1:dimres
         for col in 1:dimres
 
             for trace_idx in 1:dimres 
 
-                bigrow = parse(Int, join(vcat(digits(row-1, base=2, pad = div(N,2)), digits(trace_idx-1, base=2, pad = div(N,2)))) |> reverse, base = 2) # this is bin(trace_idx))bin(row)
-                bigcol = parse(Int, join(vcat(digits(col-1, base=2, pad = div(N,2)), digits(trace_idx-1, base=2, pad = div(N,2)))) |> reverse, base = 2) # this is bin(trace_idx))bin(col)
+                bigrow = join(vcat(digits(row-1, base=2, pad = div(N,2)), digits(trace_idx-1, base=2, pad = div(N,2)))) # this is bin(row))bin(trace_idx)
+                bigcol = join(vcat(digits(col-1, base=2, pad = div(N,2)), digits(trace_idx-1, base=2, pad = div(N,2)))) # this is bin(col))bin(trace_idx)
 
-                if (!check_zeroq(bigrow-1, N)) || (!check_zeroq(bigcol-1, N))
+                if !(bigrow in zero_q_list) || !(bigcol in zero_q_list)
                     continue
                 else
                     bigrow_idx = findfirst(x -> x == bigrow, zero_q_list)
                     bigcol_idx = findfirst(x -> x == bigcol, zero_q_list)
+                    # println("r_a = ", row, ", c_a = ", col, " ", bigrow, " ", bigcol, " r_a r_b = ", bigrow_idx, ", c_a c_b = ", bigcol_idx, " value = ", real(rho_m[bigrow_idx, bigcol_idx]))
+                    # println(bigrow_idx, " ", bigcol_idx)
                     res[row, col] += rho_m[bigrow_idx, bigcol_idx]
                 end
 
@@ -1531,5 +1636,64 @@ function get_charge_config_sparse(s)
     end
 
     return config
+
+end
+
+function get_product_mps(state, sites)
+
+    N = length(state)
+    mps = MPS(sites)
+    links = [Index(QN() => 1; tags = "Link,l=$(n)") for n in 1:N-1]
+
+    # Index(QN() => 1, QN("Sz", -2) => 1, QN("Sz", 2) => 1, QN("Sz", 0) => 1, QN("Sz", 0) => 1; tags = join(["Link,l=", string(n)]))
+
+    for n in 1:N
+
+        if n == 1
+
+            s, lr = sites[n], links[n]
+            
+            mps[n] = ITensor(ComplexF64, s, lr)
+
+            if state[n] == "0"
+                mps[n][s => 1, lr => 1] = 1
+                # mps[n][s => 2, lr => 1] = 0
+            else
+                # mps[n][s => 1, lr => 1] = 0
+                mps[n][s => 2, lr => 1] = 1
+            end
+            
+        elseif n == N
+
+            s, ll = sites[n], dag(links[n-1])
+            
+            mps[n] = ITensor(ComplexF64, s, ll)
+
+            if state[n] == "0"
+                mps[n][s => 1, ll => 1] = 1
+                # mps[n][s => 2, ll => 1] = 0
+            else
+                # mps[n][s => 1, ll => 1] = 0
+                mps[n][s => 2, ll => 1] = 1
+            end
+
+        else
+
+            s, ll, lr = sites[n], dag(links[n-1]), links[n]
+
+            mps[n] = ITensor(ComplexF64, s, ll, lr)
+
+            if state[n] == "0"
+                mps[n][s => 1, ll => 1, lr => 1] = 1
+                # mps[n][s => 2, ll => 1, lr => 1] = 0
+            else
+                # mps[n][s => 1, ll => 1, lr => 1] = 0
+                mps[n][s => 2, ll => 1, lr => 1] = 1
+            end
+
+        end
+    end
+
+    return mps
 
 end
