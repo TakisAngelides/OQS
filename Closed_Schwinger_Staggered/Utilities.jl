@@ -1,4 +1,4 @@
-function get_exp_Hz(sites, a, x, l_0, mg)
+function get_exp_Hz(sites, a, x, l_0, ma)
 
     """
     a = prefactor of H_z eg: -i tau / 2 to give exp(-i * tau * Hz / 2)
@@ -15,26 +15,21 @@ function get_exp_Hz(sites, a, x, l_0, mg)
         
         for k in n+1:N
 
-            # Z_n Z_k long range interaction
-            opsum += a*4*0.5*(N-k),"Sz",n,"Sz",k
+            opsum += (0.25/x)*(N-k),"Z",n,"Z",k
 
         end
 
-        # Single Z terms coming from the electric field term
-        opsum += a*2*(N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Sz",n
+        opsum += ((N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2)/x),"Z",n
 
-        # Single Z terms from mass term
-        opsum += a*2*(mg*sqrt(x)*(-1)^(n-1)),"Sz",n
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n
 
     end
 
-    # For loop above goes from n = 1 to N-1 but mass term also has n = N
-    opsum += a*2*(mg*sqrt(x)*(-1)^(N-1)),"Sz",N
+    opsum += (0.5*ma*(-1)^(N-1)),"Z",N
 
-    # Constant term
-    opsum += a*((l_0^2)*(N-1) + (l_0*N/2) + (N^2)/8),"Id",1
+    opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N/(4*x)) + (N^2)/16),"Id",1
 
-    mpo = MPO(opsum, sites)
+    mpo = a*MPO(opsum, sites)
 
     # exp(aHz/2) -> I + aHz/2
     final_mpo = MPO(sites, "Id") + mpo 
@@ -44,6 +39,8 @@ function get_exp_Hz(sites, a, x, l_0, mg)
 end
 
 function get_Hz(sites, x, l_0, mg)
+
+    # READ: This will not be the same as the get_exp_Hz function it was changed to match OQS Hamiltonian
 
     """
     a = prefactor of H_z eg: -i tau / 2 to give exp(-i * tau * Hz / 2)
@@ -97,8 +94,8 @@ function get_exp_Ho(sites, a, x)::Vector{ITensor}
 
     for n=1:2:(N-1)
 
-        hj = x * op("S-", sites[n]) * op("S+", sites[n+1])
-        hj += x * op("S+", sites[n]) * op("S-", sites[n+1])
+        hj = 0.5 * op("S-", sites[n]) * op("S+", sites[n+1])
+        hj += 0.5 * op("S+", sites[n]) * op("S-", sites[n+1])
         Gj = exp(a * hj)
         push!(gates, Gj)
 
@@ -125,8 +122,8 @@ function get_exp_He(sites, a, x)::Vector{ITensor}
 
     for n=2:2:(N-2)
 
-        hj = x * op("S-", sites[n]) * op("S+", sites[n+1])
-        hj += x * op("S+", sites[n]) * op("S-", sites[n+1])
+        hj = 0.5 * op("S-", sites[n]) * op("S+", sites[n+1])
+        hj += 0.5 * op("S+", sites[n]) * op("S-", sites[n+1])
         Gj = exp(a * hj)
         push!(gates, Gj)
 
@@ -229,7 +226,7 @@ function get_which_canonical_form(mps)
 
 end
 
-function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 1e-9)
+function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 0)
 
     for (idx_num, idx) in enumerate(1:2:N-1)
 
@@ -267,7 +264,7 @@ function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 1e-9)
 
 end
 
-function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 1e-9)
+function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 0)
 
     """
     After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
@@ -275,7 +272,7 @@ function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 1e-9)
     """
 
     # mps[1], mps[2] = ITensors.qr(mps[1]*mps[2], uniqueinds(mps[1], mps[2]); positive = true, tags = "Link,l=$(1)")
-    mps[1], S, V = ITensors.svd(mps[1]*mps[2], uniqueinds(mps[1], mps[2]), lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)")
+    mps[1], S, V = ITensors.svd(mps[1]*mps[2], uniqueinds(mps[1], mps[2]), lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)"; cutoff = cutoff)
     mps[2] = S*V
 
     for (idx_num, idx) in enumerate(2:2:N-2)
@@ -313,7 +310,7 @@ end
 
 function get_entanglement_entropy(psi, site)
     
-    orthogonalize!(psi, site)
+    ITensors.orthogonalize!(psi, site)
     if site == 1
         U,S,V = svd(psi[site], siteind(psi, site))
     else
@@ -348,7 +345,7 @@ function get_Z_configuration(psi)
 
     for i in 1:n
     
-        push!(res, inner(psi', get_MPO_from_operator_sum(get_Z_site_operator(i), sites), psi))
+        push!(res, inner(psi', MPO(get_Z_site_operator(i), sites), psi))
 
     end
 
