@@ -1093,132 +1093,136 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
     opsum += 1im*(0.5*ma*(-1)^(N-1)),"Z",N+N
     opsum += 1im*((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1+N
 
-    h1 = MPO(opsum, sites; cutoff = 1e-20)
+    h1 = MPO(opsum, sites; cutoff = 0)
 
-    for n=1:N
-        for m=1:N
+    if aD_0 != 0
 
-            # The L_m_left L_n_right
-            opsum = OpSum()
-            opsum += 0.5*(-1)^m,"Z",m
-            opsum += 0.5*(-1)^m,"Id",1
-            if m != 1
-                opsum += ( 1im*(-1)^m/(16*aT)),"X",m-1,"Y",m
-                opsum += (-1im*(-1)^m/(16*aT)),"Y",m-1,"X",m
-            end
-            if m != N
-                opsum += (-1im*(-1)^m/(16*aT)),"X",m,"Y",m+1 
-                opsum += ( 1im*(-1)^m/(16*aT)),"Y",m,"X",m+1
-            end 
-            h2 = MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites; cutoff = 1e-20)
-            
-            opsum = OpSum()
-            opsum += 0.5*(-1)^n,"Z",n+N
-            opsum += 0.5*(-1)^n,"Id",1
-            if n != 1
-                opsum += (-1im*(-1)^n/(16*aT)),"X",n-1,"Y",n+N
-                opsum += ( 1im*(-1)^n/(16*aT)),"Y",n-1,"X",n+N
-            end
-            if n != N
-                opsum += ( 1im*(-1)^n/(16*aT)),"X",n,"Y",n+N+1 
-                opsum += (-1im*(-1)^n/(16*aT)),"Y",n,"X",n+N+1
-            end 
-            h3 = hermitian_conjugate_mpo(MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites; cutoff = 1e-20))
-            h1 += apply(h2, h3, cutoff = 1e-20)
-            
-            # The Ldag_n_L_m_left
-            opsum = OpSum()
-            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n,"Z",m
-            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n
-            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Id",1
-            if (n != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"X",n-1,"Y",n,"Z",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Y",n-1,"X",n,"Z",m
-            end            
-            if (n != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"X",n,"Y",n+1,"Z",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Y",n,"X",n+1,"Z",m
-            end
-            if (m != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m-1,"Y",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m-1,"X",m
-            end            
-            if (m != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m,"Y",m+1
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m,"X",m+1
-            end
-            if (n != 1) && (m != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m-1,"Y",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m-1,"X",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m-1,"Y",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m-1,"X",m
-            end
-            if (n != 1) && (m != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m,"X",m+1
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m,"Y",m+1
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m,"Y",m+1
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m,"X",m+1
-            end
-            if (n != N) && (m != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m-1,"Y",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m-1,"X",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m-1,"X",m
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m-1,"Y",m
-            end            
-            if (n != N) && (m != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m,"X",m+1
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m,"Y",m+1
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m,"Y",m+1
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m,"X",m+1
-            end
-            
-            # The Ldag_n_L_m_right
-            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n+N,"Z",m+N
-            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n+N
-            opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Id",1+N
-            if (n != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"X",n-1+N,"Y",n+N,"Z",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Y",n-1+N,"X",n+N,"Z",m+N
-            end            
-            if (n != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"X",n+N,"Y",n+1+N,"Z",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Y",n+N,"X",n+1+N,"Z",m+N
-            end
-            if (m != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"X",m-1+N,"Y",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"Y",m-1+N,"X",m+N
-            end            
-            if (m != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"X",m+N,"Y",m+1+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"Y",m+N,"X",m+1+N
-            end
-            if (n != 1) && (m != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"X",m-1+N,"Y",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"Y",m-1+N,"X",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"X",m-1+N,"Y",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"Y",m-1+N,"X",m+N
-            end
-            if (n != 1) && (m != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"Y",m+N,"X",m+1+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"X",m+N,"Y",m+1+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"X",m+N,"Y",m+1+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"Y",m+N,"X",m+1+N
-            end
-            if (n != N) && (m != 1)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"X",m-1+N,"Y",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"Y",m-1+N,"X",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m-1+N,"X",m+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m-1+N,"Y",m+N
-            end            
-            if (n != N) && (m != N)
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"Y",m+N,"X",m+1+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"X",m+N,"Y",m+1+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m+N,"Y",m+1+N
-                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m+N,"X",m+1+N
-            end
-            h1 += MPO(opsum, sites; cutoff = 1e-20)
+        for n=1:N
+            for m=1:N
 
+                # The L_m_left L_n_right
+                opsum = OpSum()
+                opsum += 0.5*(-1)^m,"Z",m
+                opsum += 0.5*(-1)^m,"Id",1
+                if m != 1
+                    opsum += ( 1im*(-1)^m/(16*aT)),"X",m-1,"Y",m
+                    opsum += (-1im*(-1)^m/(16*aT)),"Y",m-1,"X",m
+                end
+                if m != N
+                    opsum += (-1im*(-1)^m/(16*aT)),"X",m,"Y",m+1 
+                    opsum += ( 1im*(-1)^m/(16*aT)),"Y",m,"X",m+1
+                end 
+                h2 = MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites; cutoff = 0)
+                
+                opsum = OpSum()
+                opsum += 0.5*(-1)^n,"Z",n+N
+                opsum += 0.5*(-1)^n,"Id",1
+                if n != 1
+                    opsum += (-1im*(-1)^n/(16*aT)),"X",n-1,"Y",n+N
+                    opsum += ( 1im*(-1)^n/(16*aT)),"Y",n-1,"X",n+N
+                end
+                if n != N
+                    opsum += ( 1im*(-1)^n/(16*aT)),"X",n,"Y",n+N+1 
+                    opsum += (-1im*(-1)^n/(16*aT)),"Y",n,"X",n+N+1
+                end 
+                h3 = hermitian_conjugate_mpo(MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites; cutoff = 0))
+                h1 = add(h1, apply(h2, h3, cutoff = 0); cutoff = 0)
+                
+                # The Ldag_n_L_m_left
+                opsum = OpSum()
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n,"Z",m
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Id",1
+                if (n != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"X",n-1,"Y",n,"Z",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Y",n-1,"X",n,"Z",m
+                end            
+                if (n != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"X",n,"Y",n+1,"Z",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Y",n,"X",n+1,"Z",m
+                end
+                if (m != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m-1,"Y",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m-1,"X",m
+                end            
+                if (m != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n,"X",m,"Y",m+1
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n,"Y",m,"X",m+1
+                end
+                if (n != 1) && (m != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m-1,"Y",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m-1,"X",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m-1,"Y",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m-1,"X",m
+                end
+                if (n != 1) && (m != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"Y",m,"X",m+1
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1,"X",n,"X",m,"Y",m+1
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"X",m,"Y",m+1
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1,"Y",n,"Y",m,"X",m+1
+                end
+                if (n != N) && (m != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m-1,"Y",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m-1,"X",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m-1,"X",m
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m-1,"Y",m
+                end            
+                if (n != N) && (m != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"Y",m,"X",m+1
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n,"Y",n+1,"X",m,"Y",m+1
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"X",m,"Y",m+1
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n,"X",n+1,"Y",m,"X",m+1
+                end
+                
+                # The Ldag_n_L_m_right
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Z",n+N,"Z",m+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.5*(-1)^(n+m),"Z",n+N
+                opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * 0.25*(-1)^(n+m),"Id",1+N
+                if (n != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"X",n-1+N,"Y",n+N,"Z",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Y",n-1+N,"X",n+N,"Z",m+N
+                end            
+                if (n != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"X",n+N,"Y",n+1+N,"Z",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Y",n+N,"X",n+1+N,"Z",m+N
+                end
+                if (m != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"X",m-1+N,"Y",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"Y",m-1+N,"X",m+N
+                end            
+                if (m != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"X",m+N,"Y",m+1+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (1im*(-1)^(n + m)/(32*aT)),"Z",n+N,"Y",m+N,"X",m+1+N
+                end
+                if (n != 1) && (m != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"X",m-1+N,"Y",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"Y",m-1+N,"X",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"X",m-1+N,"Y",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"Y",m-1+N,"X",m+N
+                end
+                if (n != 1) && (m != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"Y",m+N,"X",m+1+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n-1+N,"X",n+N,"X",m+N,"Y",m+1+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"X",m+N,"Y",m+1+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n-1+N,"Y",n+N,"Y",m+N,"X",m+1+N
+                end
+                if (n != N) && (m != 1)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"X",m-1+N,"Y",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"Y",m-1+N,"X",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m-1+N,"X",m+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m-1+N,"Y",m+N
+                end            
+                if (n != N) && (m != N)
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"Y",m+N,"X",m+1+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"X",n+N,"Y",n+1+N,"X",m+N,"Y",m+1+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m+N,"Y",m+1+N
+                    opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m+N,"X",m+1+N
+                end
+                h1 = add(h1, MPO(opsum, sites; cutoff = 0); cutoff = 0)
+
+            end
         end
+
     end
 
     return h1 
@@ -1269,7 +1273,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
     H = get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
 
     # Unitary part of Lindbladian
-    L += -1im * kron(H, eye(2^N)) + 1im * kron(eye(2^N), transpose(H)) 
+    L += -1im * my_kron(H, eye(2^N)) + 1im * my_kron(eye(2^N), transpose(H)) 
 
     for n in 1:N
         for m in 1:N
@@ -1279,7 +1283,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
 
             tmp3 = tmp1' * tmp2 # the dash is the dagger
             
-            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((kron(tmp2, transpose(tmp1'))) - 0.5*(kron(tmp3, eye(2^N))) -0.5*(kron(eye(2^N), transpose(tmp3))))
+            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((my_kron(tmp2, transpose(tmp1'))) - 0.5*(my_kron(tmp3, eye(2^N))) -0.5*(my_kron(eye(2^N), transpose(tmp3))))
 
         end
     end
@@ -1484,19 +1488,23 @@ function get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_o
     idnt_r = project_zeroq(idnt)
 
     # Unitary part of Lindbladian
-    L += -1im * kron(H_r, idnt_r) + 1im * kron(idnt_r, transpose(H_r)) 
+    L += -1im * my_kron(H_r, idnt_r) + 1im * my_kron(idnt_r, transpose(H_r)) 
 
-    for n in 1:N
-        for m in 1:N
+    if aD_0 != 0
 
-            tmp1 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, n, aT))
-            tmp2 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, m, aT))
+        for n in 1:N
+            for m in 1:N
 
-            tmp3 = tmp1' * tmp2 # the dash is the dagger
-            
-            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((kron(tmp2, conj(tmp1))) - 0.5*(kron(tmp3, idnt_r)) -0.5*(kron(idnt_r, transpose(tmp3))))
+                tmp1 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, n, aT))
+                tmp2 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, m, aT))
 
+                tmp3 = tmp1' * tmp2 # the dash is the dagger
+                
+                L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((my_kron(tmp2, conj(tmp1))) - 0.5*(my_kron(tmp3, idnt_r)) -0.5*(my_kron(idnt_r, transpose(tmp3))))
+
+            end
         end
+
     end
 
     return L
@@ -1554,7 +1562,7 @@ function swap(i, j, N)
     idx2 = max(i, j)
 
     local_swap = sparse([[1 0 0 0]; [0 0 1 0]; [0 1 0 0]; [0 0 0 1]])
-    full_swap(idx) = my_kron(sparse(I, 2^(idx-1), 2^(idx-1)), my_kron(local_swap, sparse(I, 2^(N-idx-1), 2^(N-idx-1))))
+    full_swap(idx) = kron(sparse(I, 2^(idx-1), 2^(idx-1)), kron(local_swap, sparse(I, 2^(N-idx-1), 2^(N-idx-1))))
 
     for k in idx1:idx2-1
 
@@ -1578,7 +1586,7 @@ end
 
 function get_CP_operator_sparse(N)
 
-    x(idx) = get_op(["X"], [idx], N)
+    x(idx) = get_op(["X"], [idx], N; reverse_flag = false)
 
     res = sparse(I, 2^N, 2^N)
 
@@ -1695,5 +1703,138 @@ function get_product_mps(state, sites)
     end
 
     return mps
+
+end
+
+function get_particle_number_operator_sparse(N)
+
+    op = 0.5*N*sparse(I, 2^N, 2^N)
+    for n in 1:N
+        op += 0.5*(-1)^(n-1)*get_op(["Z"], [n], N)
+    end
+
+    return op
+
+end
+
+function get_particle_number_operator_sparse_old(N, x)
+
+    op = zeros(2^N, 2^N)
+    for n in 1:N
+        op += (sqrt(x)/(4*N))*get_op(["Z"], [n], N)
+    end
+
+    return op
+
+end
+
+function get_charge_config_from_zeroq_density_matrix(N, rho)
+
+    res = []
+    for i in 1:N
+        op = project_zeroq(0.5*(-1)^(i-1)*sparse(I, 2^N, 2^N) + 0.5*get_op(["Z"], [i], N))
+        push!(res, real(tr(rho*op)))
+    end
+
+    return res
+
+end
+
+function get_electric_field_from_zeroq_density_matrix(N, rho, l_0)
+
+    res = []
+    charge_config = get_charge_config_from_zeroq_density_matrix(N, rho)
+    for i in 1:N
+        push!(res, l_0 + sum(charge_config[1:i]))
+    end
+
+    return res
+
+end
+
+function get_entanglement_entropy_reduced_from_environment(rho; tol = 1e-12)
+
+    evals = eigen(Matrix(rho)).values
+
+    return sum(-real(eval)*log(real(eval)) for eval in evals if real(eval) >= tol)
+
+
+end
+
+function get_CP_operator(sites)
+
+    N = length(sites)
+
+    # MPO for X gate
+    function x_gate(idx)
+        opsum = OpSum()
+        opsum += "X",idx
+        x_mpo = MPO(opsum, sites)
+        return x_mpo
+    end
+
+    # MPO for swap gate for site, site + 1
+    function swap_nearest_neighbour_gate_mpo(idx)
+    
+        opsum = OpSum()
+        opsum += 0.5,"I",1
+        opsum += 0.5,"X",idx,"X",idx+1
+        opsum += 0.5,"Y",idx,"Y",idx+1
+        opsum += 0.5,"Z",idx,"Z",idx+1 
+        swap_mpo = MPO(opsum, sites)
+
+        return swap_mpo
+        
+    end
+
+    # MPO for swap operator between sites i and j
+    function swap(i, j)
+
+        idx1 = min(i, j)
+        idx2 = max(i, j)
+
+        res = MPO(sites, "Id")
+
+        for k in idx1:idx2-1
+
+            res = apply(swap_nearest_neighbour_gate_mpo(k), res)
+    
+        end
+    
+        if idx2-idx1 > 1
+    
+            for k in reverse(idx1:idx2-2)
+    
+                res = apply(swap_nearest_neighbour_gate_mpo(k), res)
+    
+            end
+    
+        end
+
+        return res
+
+    end
+
+    final_res = MPO(sites, "Id")
+
+    for j in 1:div(N, 2)
+
+        final_res = apply(x_gate(N+1-j), final_res)
+        final_res = apply(x_gate(j), final_res)
+        final_res = apply(swap(j, N+1-j), final_res)
+
+    end
+
+    return final_res
+
+end
+
+function get_dirac_vacuum_zeroq_density_matrix_sparse(N)
+
+    state = join([isodd(n) ? "0" : "1" for n = 1:N])
+    decimal_number = parse(Int, state, base=2) + 1
+    rho = zeros(2^N, 2^N)
+    rho[decimal_number, decimal_number] = 1 
+    return project_zeroq(rho)
 
 end

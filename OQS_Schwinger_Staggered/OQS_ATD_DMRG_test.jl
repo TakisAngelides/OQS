@@ -11,11 +11,11 @@ include("Utilities.jl")
 
 N = 4
 tau = 0.001 # time step in time evolution rho -> exp(-tau L) after one step
-cutoff = 0 # cutoff for SVD
+cutoff = 1e-9 # cutoff for SVD
 tol = 1e-16 # tolerance for DMRG convergence and ATDDMRG convergence
 e = 0.8
 x = 1/e^2
-l_0 = 0.45
+l_0 = 0.0
 D = 1000
 lambda = 0.0
 ma = 0.5
@@ -25,7 +25,7 @@ beta = 1/aT
 sigma_over_a = 3.0
 env_corr_type = "delta"
 max_sweeps = 1000
-max_steps = 3
+max_steps = 10
 measure_every = 1 # this determines how often to save rho and measure the energy in ATDDMRG
 
 function run_ATDDMRG()
@@ -70,7 +70,8 @@ function run_ATDDMRG()
         push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
     end
     rhodim = Int(binomial(N, div(N, 2)))
-    push!(ee_list, get_entanglement_entropy_reduced_matrix(N, reshape(project_zeroq(mpo_to_matrix(rho)), rhodim, rhodim)))
+    # push!(ee_list, get_entanglement_entropy_reduced_matrix(N, reshape(project_zeroq(mpo_to_matrix(rho)), rhodim, rhodim)))
+    push!(ee_list, get_entanglement_entropy_mpo(rho, 1:div(N, 2), sites))
     
     # Print statements
     println("The time to get the initial rho and MPO lists is: $(time() - t)\n")
@@ -142,29 +143,35 @@ function run_ATDDMRG()
         
         if (step % measure_every == 0) || (step == max_steps)
 
+            println("Now measuring observables")
+
             # println("The trace should always be 1: ", tr(rho))
 
             # Measure the observables
             push!(step_num_list, step)
             push!(max_bond_list, maxlinkdim(rho))
             push!(state_list, project_zeroq(mpo_to_matrix(rho)))
+
             # println("The trace of rho should be 1: ", tr(rho))
             
             # test
             # push!(state_list, project_zeroq(reshape(Array(rho, inds(rho; :plev => 1)..., inds(rho; :plev => 0)...), 2^N, 2^N)))
 
             # sum_for_z = 0
+
             for idx in 1:N
                 # exp_val_z = real(tr(apply(rho, z_mpo[idx])))
                 exp_val_z = real(tr(project_zeroq(mpo_to_matrix(rho))*project_zeroq(mpo_to_matrix(z_mpo[idx]))))
                 # sum_for_z += exp_val_z
                 push!(z_list[idx], exp_val_z)
             end
+
             # println("The total charge should be 0: ", sum(sum_for_z))
             # push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
 
-            push!(ee_list, get_entanglement_entropy_reduced_matrix(N, reshape(project_zeroq(mpo_to_matrix(rho)), rhodim, rhodim)))
-        
+            # push!(ee_list, get_entanglement_entropy_reduced_matrix(N, reshape(project_zeroq(mpo_to_matrix(rho)), rhodim, rhodim)))
+            push!(ee_list, get_entanglement_entropy_mpo(rho, 1:div(N, 2), sites))
+
             # test
             # rhodim = Int(binomial(N, div(N, 2)))
             # push!(ee_list, get_entanglement_entropy_reduced_matrix(N, reshape(project_zeroq(reshape(Array(rho, inds(rho; :plev => 1)..., inds(rho; :plev => 0)...), 2^N, 2^N)), rhodim, rhodim)))
@@ -218,17 +225,18 @@ function run_ATDDMRG()
     end
     
     p2 = plot()
-    plot!(step_num_list[1:end-1], (ee_list - ee_list_sparse)[1:end-1])
+    plot!(step_num_list[1:end-1], abs.(ee_list - ee_list_sparse)[1:end-1])
     # plot!(step_num_sparse_list, ee_list_sparse, label = "Sparse")
     # plot!(step_num_list, ee_list, label = "MPO")
-    title!("Difference of Entanglement Entropy MPO vs Sparse")
+    println("Final entropy: ", ee_list[end], " ", ee_list_sparse[end])
+    title!("Difference in Entanglement Entropy MPO vs Sparse")
     display(p2)
 
     p3 = plot()
     for idx in 1:N
         # plot!(step_num_list, z_list[idx], label = "MPO, $(idx)")
         # plot!(step_num_sparse_list, z_list_sparse[idx], label = "Sparse, $(idx)", linestyle = :dash)
-        plot!(step_num_list[1:end-1], (z_list[idx] - z_list_sparse[idx])[1:end-1], label = "Site: $(idx)")
+        plot!(step_num_list[1:end-1], abs.((z_list[idx] - z_list_sparse[idx])[1:end-1]), label = "Site: $(idx)")
     end
     title!("Difference of Middle Z Operator\nExpectation Value MPO vs Sparse")
     display(p3)
@@ -244,7 +252,6 @@ function run_ATDDMRG()
     plot!(step_num_list, norm_diff)
     title!("Norm of difference of MPO and sparse states")
     display(p4)
-
 
 end
 
