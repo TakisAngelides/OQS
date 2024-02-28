@@ -393,7 +393,7 @@ function get_particle_number_MPO(sites)
 
     for n in 1:N
         
-        opsum += 0.5*(-1)^(n-1),"Sz",n
+        opsum += 0.5*(-1)^(n-1),"Z",n
 
     end
 

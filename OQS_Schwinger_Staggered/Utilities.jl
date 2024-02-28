@@ -396,6 +396,8 @@ function get_particle_number_MPO(sites)
 
     N = length(sites)
 
+    println(N)
+
     opsum = OpSum()
 
     for n in 1:N
@@ -1836,5 +1838,15 @@ function get_dirac_vacuum_zeroq_density_matrix_sparse(N)
     rho = zeros(2^N, 2^N)
     rho[decimal_number, decimal_number] = 1 
     return project_zeroq(rho)
+
+end
+
+function get_dirac_vacuum_density_matrix(sites)
+
+    N = length(sites)
+    state = [isodd(n) ? "0" : "1" for n = 1:N] # 0101
+    mps = MPS(sites, state)
+   
+    return outer(mps', mps)
 
 end
