@@ -5,3 +5,16 @@ Testing to see if the pipeline works
 2
 
 Comparing sparse with MPO for N = 4
+
+3 
+
+Trying out two different time steps one after the other
+
+4
+
+Producing plot for time per iteration vs 1/N
+
+5
+
+At N = 10 for fixed parameters change the cutoff to see how the maximum and average bond dimensions behave
+
