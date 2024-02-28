@@ -28,6 +28,7 @@ sigma_over_a_list = [3.0]
 env_corr_type_list = ["constant"]
 max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
 l_0_initial_state = 0.0
+dirac_vacuum_initial_state = "true"
 project_number = 5 # <==================================== Important to change according to which project file ================================
 
 def write_dag():

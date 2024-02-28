@@ -17,10 +17,10 @@ should_transfer_files = IF_NEEDED
 
 # max_retries = 5
 
-error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff)_initst_$(dirac_vacuum_initial_state).error
+error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff).error
 
-output = $(path_to_project)/DAGS/$(project_number)/Logs/Output/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff)_initst_$(dirac_vacuum_initial_state).out                    
+output = $(path_to_project)/DAGS/$(project_number)/Logs/Output/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff).out                    
 
-log = $(path_to_project)/DAGS/$(project_number)/Logs/Log/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff)_initst_$(dirac_vacuum_initial_state).log 
+log = $(path_to_project)/DAGS/$(project_number)/Logs/Log/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff).log 
 
 queue

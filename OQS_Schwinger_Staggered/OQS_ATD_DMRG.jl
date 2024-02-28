@@ -6,6 +6,7 @@ using Arpack
 using KrylovKit
 using TupleTools
 using OpenQuantumTools
+using Statistics
 include("Utilities.jl")
 
 # Inputs
@@ -88,6 +89,7 @@ function run_ATDDMRG()
 
     # Prepare the lists for the tracked observables and the associated MPO
     max_bond_list = Int[]
+    avg_bond_list = Int[]
     if N <= 8
         ee_list = Float64[]
     end
@@ -98,6 +100,7 @@ function run_ATDDMRG()
     # Push into the lists the initial state observables
     push!(step_num_list, 0)
     push!(max_bond_list, maxlinkdim(rho))
+    push!(max_bond_list, mean(linkdims(rho)))
     for idx in 1:N
         push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
     end
@@ -143,13 +146,14 @@ function run_ATDDMRG()
 
         # Take care of hermiticity and positivity of the density matrix
         rho = add(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff)/2 # fix hermiticity with rho -> rho dagger + rho over 2
-        rho = rho/tr(rho)
+        rho = rho/tr(rho) # fix the trace to 1 again
         
         if (step % measure_every == 0) || (step == max_steps)
 
             # Measure the observables
             push!(step_num_list, step)
             push!(max_bond_list, maxlinkdim(rho))
+            push!(max_bond_list, mean(linkdims(rho)))
             for idx in 1:N
                 push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
             end
@@ -172,6 +176,7 @@ function run_ATDDMRG()
     # Write observable lists to file
     write(file, "step_num_list", step_num_list)
     write(file, "max_bond_list", max_bond_list)
+    write(file, "avg_bond_list", avg_bond_list)
     for idx in 1:N
         write(file, "z_list_$(idx)", z_list[idx])
     end
