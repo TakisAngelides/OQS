@@ -31,6 +31,7 @@ env_corr_type = ARGS[18]
 max_sweeps = parse(Int, ARGS[19])
 sparse_evol = parse(Bool, ARGS[20])
 l_0_initial_state = parse(Float64, ARGS[21])
+dirac_vacuum_initial_state = parse(Bool, ARGS[22])
 
 function run_ATDDMRG()
 
@@ -42,15 +43,20 @@ function run_ATDDMRG()
         # Initialize rho from the ground state of the Hamiltonian
         println("Initializing with the MPO corresponding to the ground state of H_system\n")
         sites = siteinds("S=1/2", N, conserve_qns = true)
-        state = [isodd(n) ? "0" : "1" for n = 1:N]
-        mps = randomMPS(sites, state)
-        H = get_aH_Hamiltonian(sites, x, l_0_initial_state, ma, lambda) 
-        sweeps = Sweeps(max_sweeps; maxdim = D)
-        observer = DMRGObserver(;energy_tol = tol)
-        gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true) 
-        rho_initial = outer(gs', gs; cutoff = 0)
+        
+        if dirac_vacuum_initial_state
+            rho_initial = get_dirac_vacuum_density_matrix(sites)
+        else
+            state = [isodd(n) ? "0" : "1" for n = 1:N]
+            mps = randomMPS(sites, state)
+            H = get_aH_Hamiltonian(sites, x, l_0_initial_state, ma, lambda) 
+            sweeps = Sweeps(max_sweeps; maxdim = D)
+            observer = DMRGObserver(;energy_tol = tol)
+            gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true) 
+            rho_initial = outer(gs', gs; cutoff = 0)
+            println("The ground state energy was found to be $(gs_energy)\n")
+        end
         rho = copy(rho_initial)
-        println("The ground state energy was found to be $(gs_energy)\n")
         L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
         L_taylor_expectation_value = real(inner(L_taylor_expanded_part_tmp, rho))
         println("The expectation value of the taylor expanded part of the Lindblad operator is $(L_taylor_expectation_value)\n")
@@ -58,7 +64,6 @@ function run_ATDDMRG()
         println("The trace of initial rho should be 1: $(tr(rho))\n")
         flush(stdout)
 
-    
     else 
 
         # This is the case when the time step has decreased but continues evolving a given state from a larger time step
