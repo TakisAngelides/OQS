@@ -10,23 +10,23 @@ using OpenQuantumTools
 include("Utilities.jl")
 ITensors.disable_warn_order()
 
-N = 8
-tau = 0.1 # time step in time evolution rho -> exp(-tau L) after one step
-cutoff = 1e-9 # cutoff for SVD
+N = 10
+tau = 0.01 # time step in time evolution rho -> exp(-tau L) after one step
+cutoff = 1e-13 # cutoff for SVD
 tol = 1e-16 # tolerance for DMRG convergence and ATDDMRG convergence
 e = 0.8
-x = 1/e^2
+x = 1.05
 l_0 = 0.9
 D = 1000
 lambda = 0.0
-ma = 0.5
+ma = 4.5
 aD_0 = 1.0
 aT = 10.0
 beta = 1/aT
 sigma_over_a = 3.0
 env_corr_type = "delta"
 max_sweeps = 1000
-max_steps = 50
+max_steps = 5
 l_0_initial = 0.0
 measure_every = 1 # this determines how often to save rho and measure the energy in ATDDMRG
 get_entanglement = false
@@ -50,9 +50,10 @@ function run_ATDDMRG()
     # rho = outer(gs', gs; cutoff = cutoff)
 
     # Test Dirac vacuum as initial state
-    state = [isodd(n) ? "1" : "0" for n = 1:N]
-    mps = MPS(sites, state)
-    rho = outer(mps', mps; cutoff = cutoff)
+    # state = [isodd(n) ? "1" : "0" for n = 1:N]
+    # mps = MPS(sites, state)
+    # rho = outer(mps', mps; cutoff = cutoff)
+    rho = get_dirac_vacuum_density_matrix(sites)
 
     L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
     L_taylor_expectation_value = real(inner(L_taylor_expanded_part_tmp, rho))
@@ -72,6 +73,8 @@ function run_ATDDMRG()
     step_num_list = Int[]
     z_mpo = [MPO(get_Z_site_operator(idx), sites) for idx in 1:N]
     z_list = [[] for _ in 1:N]
+    particle_number_mpo = get_particle_number_MPO(sites)
+    particle_number = [real(tr(apply(rho, particle_number_mpo)))]
     if get_state_diff_norm
         state_list = [project_zeroq(mpo_to_matrix(rho))]
     end
@@ -160,10 +163,13 @@ function run_ATDDMRG()
 
             println("Now measuring observables")
 
+            println("The link dimensions are: $(linkdims(rho))")
+
             # println("The trace should always be 1: ", tr(rho))
 
             # Measure the observables
             push!(step_num_list, step)
+            push!(particle_number, real(tr(apply(rho, particle_number_mpo))))
             push!(max_bond_list, maxlinkdim(rho))
             if get_state_diff_norm
                 push!(state_list, project_zeroq(mpo_to_matrix(rho)))
@@ -255,14 +261,18 @@ function run_ATDDMRG()
     display(p1)
 
     p5 = plot()
-    particle_number = []
+    particle_number_from_z = []
     for t_idx in 1:max_steps
-        push!(particle_number, 0.5*N + sum([z_list[i][t_idx]*(-1)^(i-1)*0.5 for i in 1:N]))
+        push!(particle_number_from_z, 0.5*N + sum([z_list[i][t_idx]*(-1)^(i-1)*0.5 for i in 1:N]))
     end
-    title!("Particle Number vs step number")
-    plot!(p5, particle_number)
+    title!("Particle Number from Z vs step number")
+    plot!(p5, particle_number_from_z)
     display(p5)
 
+    p6 = plot()
+    title!("Particle Number vs step number")
+    plot!(p6, particle_number)
+    display(p6)
 
     if get_entanglement
         p2 = plot()

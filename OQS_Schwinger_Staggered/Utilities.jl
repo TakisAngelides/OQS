@@ -396,8 +396,6 @@ function get_particle_number_MPO(sites)
 
     N = length(sites)
 
-    println(N)
-
     opsum = OpSum()
 
     for n in 1:N
@@ -1844,7 +1842,7 @@ end
 function get_dirac_vacuum_density_matrix(sites)
 
     N = length(sites)
-    state = [isodd(n) ? "0" : "1" for n = 1:N] # 0101
+    state = [isodd(n) ? "1" : "0" for n = 1:N] 
     mps = MPS(sites, state)
    
     return outer(mps', mps)
