@@ -7,11 +7,12 @@ using Arpack
 using KrylovKit
 using TupleTools
 using OpenQuantumTools
+using Statistics
 include("Utilities.jl")
 ITensors.disable_warn_order()
 
 N = 10
-tau = 0.01 # time step in time evolution rho -> exp(-tau L) after one step
+tau = 0.1 # time step in time evolution rho -> exp(-tau L) after one step
 cutoff = 1e-13 # cutoff for SVD
 tol = 1e-16 # tolerance for DMRG convergence and ATDDMRG convergence
 e = 0.8
@@ -69,6 +70,7 @@ function run_ATDDMRG()
 
     # Prepare the lists for the tracked observables and the associated MPO
     max_bond_list = Int[]
+    avg_bond_list = Float64[]
     ee_list = Float64[]
     step_num_list = Int[]
     z_mpo = [MPO(get_Z_site_operator(idx), sites) for idx in 1:N]
@@ -82,6 +84,7 @@ function run_ATDDMRG()
     # Push into the lists the initial state observables
     push!(step_num_list, 0)
     push!(max_bond_list, maxlinkdim(rho))
+    push!(avg_bond_list, mean(linkdims(rho)))
     for idx in 1:N
         push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
     end
@@ -169,6 +172,7 @@ function run_ATDDMRG()
 
             # Measure the observables
             push!(step_num_list, step)
+            push!(avg_bond_list, mean(linkdims(rho)))
             push!(particle_number, real(tr(apply(rho, particle_number_mpo))))
             push!(max_bond_list, maxlinkdim(rho))
             if get_state_diff_norm
@@ -256,8 +260,9 @@ function run_ATDDMRG()
     end
     
     p1 = plot()
-    plot!(max_bond_list)
-    title!("Maximum bond dimension vs step number")
+    plot!(max_bond_list, label = "Max")
+    plot!(avg_bond_list, label = "Average")
+    title!("Maximum/Average bond dimension vs step number")
     display(p1)
 
     p5 = plot()
