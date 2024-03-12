@@ -38,9 +38,14 @@ function get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
 
     mpo1 = MPO(opsum, sites)
 
-    mpo2 = get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
+    if aD_0 != 0.0
+        mpo2 = get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
+        res = mpo1 + mpo2
+    else
+        res = mpo1
+    end
 
-    return mpo1 + mpo2
+    return res
 
 end
 
@@ -229,7 +234,7 @@ function get_which_canonical_form(mps)
 
 end
 
-function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-20)
+function apply_odd!(Ho_mpo_list, mpo; cutoff = 0)
 
     N = length(mpo)
 
@@ -271,7 +276,7 @@ function apply_odd!(Ho_mpo_list, mpo; cutoff = 1e-20)
 
 end
 
-function apply_even!(He_mpo_list, mpo; cutoff = 1e-20)
+function apply_even!(He_mpo_list, mpo; cutoff = 0)
 
     """
     After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
@@ -321,9 +326,9 @@ function get_entanglement_entropy(psi, site, tol = 1e-12)
     
     ITensors.orthogonalize!(psi, site)
     if site == 1
-        U,S,V = svd(psi[site], siteind(psi, site); cutoff = 1e-20)
+        U,S,V = svd(psi[site], siteind(psi, site); cutoff = 0)
     else
-        U,S,V = svd(psi[site], (linkind(psi, site-1), siteind(psi, site)); cutoff = 1e-20)
+        U,S,V = svd(psi[site], (linkind(psi, site-1), siteind(psi, site)); cutoff = 0)
     end
 
     SvN = sum(-real(singular_value^2)*log(real(singular_value^2)) for singular_value in diag(S) if real(singular_value^2) >= tol)
