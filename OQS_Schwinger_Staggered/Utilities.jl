@@ -234,7 +234,7 @@ function get_which_canonical_form(mps)
 
 end
 
-function apply_odd!(Ho_mpo_list, mpo; cutoff = 0)
+function apply_odd!(Ho_mpo_list, mpo; cutoff = 0, max_rho_D = 500)
 
     N = length(mpo)
 
@@ -247,7 +247,7 @@ function apply_odd!(Ho_mpo_list, mpo; cutoff = 0)
 
         tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*hermitian_conjugate_mpo(gate), 3 => 1)
 
-        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
         
         mpo[idx] = U
 
@@ -262,7 +262,7 @@ function apply_odd!(Ho_mpo_list, mpo; cutoff = 0)
         
             tmp = mpo[idx]*mpo[idx+1]
         
-            U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+            U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
         
             mpo[idx] = U
 
@@ -276,7 +276,7 @@ function apply_odd!(Ho_mpo_list, mpo; cutoff = 0)
 
 end
 
-function apply_even!(He_mpo_list, mpo; cutoff = 0)
+function apply_even!(He_mpo_list, mpo; cutoff = 0, max_rho_D = 500)
 
     """
     After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
@@ -296,7 +296,7 @@ function apply_even!(He_mpo_list, mpo; cutoff = 0)
 
         tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*hermitian_conjugate_mpo(gate), 3 => 1)
         
-        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
         
         mpo[idx] = U
 
@@ -310,7 +310,7 @@ function apply_even!(He_mpo_list, mpo; cutoff = 0)
     
         tmp = mpo[idx]*mpo[idx+1]
     
-        U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+        U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
     
         mpo[idx] = U
 
@@ -1347,17 +1347,17 @@ function get_entanglement_entropy_vector(state, trace_indices, dof_list, tol=1e-
     return ee, rho_reduced # return both the entanglement entropy and the reduced density matrix
 end
 
-function apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
+function apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = 0, max_rho_D = 500)
 
     H_T = get_H_taylor(sites, x, l_0, ma)
 
     tmp = -0.5*1im*tau*H_T
 
     # rho + rho * idt/2 H_T * rho - idt/2 H_T * rho
-    rho_final = rho + apply(rho, hermitian_conjugate_mpo(tmp); cutoff = cutoff) + apply(tmp, rho; cutoff = cutoff)
+    rho_final = rho + apply(rho, hermitian_conjugate_mpo(tmp); cutoff = cutoff, maxdim = max_rho_D) + apply(tmp, rho; cutoff = cutoff, maxdim = max_rho_D)
 
     # second order term in the taylor expansion only for the Hamiltonian part
-    # rho_final += (-tau^2/8)*apply(H_T, apply(H_T, rho; cutoff = cutoff); cutoff = cutoff) + (-tau^2/8)*apply(rho, apply(H_T, H_T; cutoff = cutoff); cutoff = cutoff) + (tau^2/4)*apply(H_T, apply(rho, H_T; cutoff = cutoff); cutoff = cutoff)
+    # rho_final += (-tau^2/8)*apply(H_T, apply(H_T, rho; cutoff = cutoff, maxdim = max_rho_D); cutoff = cutoff, maxdim = max_rho_D) + (-tau^2/8)*apply(rho, apply(H_T, H_T; cutoff = cutoff, maxdim = max_rho_D); cutoff = cutoff, maxdim = max_rho_D) + (tau^2/4)*apply(H_T, apply(rho, H_T; cutoff = cutoff, maxdim = max_rho_D); cutoff = cutoff, maxdim = max_rho_D)
 
     if aD_0 != 0
 
@@ -1365,10 +1365,10 @@ function apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over
         LdagnLm = -0.5 * tau * 0.5 * get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, sites)
 
         # sum over n and m: - 0.5 * dt/2 * L_n^\dagger L_m * rho
-        rho_final += apply(LdagnLm, rho; cutoff = cutoff) 
+        rho_final += apply(LdagnLm, rho; cutoff = cutoff, maxdim = max_rho_D) 
         
         # sum over n and m: - 0.5 * dt/2 * rho * L_n^\dagger L_m 
-        rho_final += apply(rho, LdagnLm; cutoff = cutoff) 
+        rho_final += apply(rho, LdagnLm; cutoff = cutoff, maxdim = max_rho_D) 
 
         # sum over n and m: aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
         for n=1:N
@@ -1387,8 +1387,8 @@ function apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over
                     Ldagn = hermitian_conjugate_mpo(get_Lindblad_jump_operator(n, aT, sites))
 
                     # 0.5 * dt * aD_0 * f(a(n-m)) * L_m * rho * L_n^\dagger
-                    Lmrho = apply(Lm, rho; cutoff = cutoff)
-                    rho_final += apply(Lmrho, Ldagn; cutoff = cutoff)
+                    Lmrho = apply(Lm, rho; cutoff = cutoff, maxdim = max_rho_D)
+                    rho_final += apply(Lmrho, Ldagn; cutoff = cutoff, maxdim = max_rho_D)
 
                 end
         
