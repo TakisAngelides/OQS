@@ -33,6 +33,7 @@ max_sweeps = parse(Int, ARGS[19])
 sparse_evol = parse(Bool, ARGS[20])
 l_0_initial_state = parse(Float64, ARGS[21])
 dirac_vacuum_initial_state = parse(Bool, ARGS[22])
+max_rho_D = 200
 
 function run_ATDDMRG()
 
@@ -41,20 +42,21 @@ function run_ATDDMRG()
     # Prepare initial rho
     if h5_previous_path == "None" 
         
-        # Initialize rho from the ground state of the Hamiltonian
-        println("Initializing with the MPO corresponding to the ground state of H_system\n")
+        # Initialize rho from the ground state of the Hamiltonian or from the Dirac vacuum
         sites = siteinds("S=1/2", N, conserve_qns = true)
         
         if dirac_vacuum_initial_state
+            println("Initializing with the MPO corresponding to the Dirac vacuum\n")
             rho_initial = get_dirac_vacuum_density_matrix(sites)
         else
+            println("Initializing with the MPO corresponding to the ground state of H_system\n")
             state = [isodd(n) ? "0" : "1" for n = 1:N]
             mps = randomMPS(sites, state)
             H = get_aH_Hamiltonian(sites, x, l_0_initial_state, ma, lambda) 
             sweeps = Sweeps(max_sweeps; maxdim = D)
             observer = DMRGObserver(;energy_tol = tol)
             gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true) 
-            rho_initial = outer(gs', gs; cutoff = 0)
+            rho_initial = outer(gs', gs; cutoff = cutoff)
             println("The ground state energy was found to be $(gs_energy)\n")
         end
         rho = copy(rho_initial)
@@ -89,7 +91,8 @@ function run_ATDDMRG()
 
     # Prepare the lists for the tracked observables and the associated MPO
     max_bond_list = Int[]
-    avg_bond_list = Int[]
+    avg_bond_list = Float64[]
+    avg_step_time = Float64[]
     if N <= 8
         ee_list = Float64[]
     end
@@ -100,7 +103,7 @@ function run_ATDDMRG()
     # Push into the lists the initial state observables
     push!(step_num_list, 0)
     push!(max_bond_list, maxlinkdim(rho))
-    push!(max_bond_list, mean(linkdims(rho)))
+    push!(avg_bond_list, mean(linkdims(rho)))
     for idx in 1:N
         push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
     end
@@ -112,7 +115,7 @@ function run_ATDDMRG()
     println("The time to get the initial rho and MPO lists is: $(time() - t)\n")
     println("Now starting the ATDDMRG algorithm\n")
     flush(stdout)
-    write(file, "rho_0", rho)
+    # write(file, "rho_0", rho)
 
     t = time()
     for step in 1:max_steps
@@ -122,30 +125,30 @@ function run_ATDDMRG()
         
         if step == 1
 
-            apply_odd!(odd_gates_2, rho; cutoff = cutoff)        
-            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
-            apply_even!(even_gates, rho; cutoff = cutoff)
-            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)            
+            apply_odd!(odd_gates_2, rho; cutoff = cutoff, max_rho_D = max_rho_D)        
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)            
         
         elseif step == max_steps
         
-            apply_odd!(odd_gates, rho; cutoff = cutoff)
-            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
-            apply_even!(even_gates, rho; cutoff = cutoff)
-            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
-            apply_odd!(odd_gates_2, rho; cutoff = cutoff)
+            apply_odd!(odd_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            apply_odd!(odd_gates_2, rho; cutoff = cutoff, max_rho_D = max_rho_D)
                 
         else
 
-            apply_odd!(odd_gates, rho; cutoff = cutoff)
-            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
-            apply_even!(even_gates, rho; cutoff = cutoff)
-            rho = apply_taylor_part(rho, cutoff, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
+            apply_odd!(odd_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
 
         end
 
         # Take care of hermiticity and positivity of the density matrix
-        rho = add(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff)/2 # fix hermiticity with rho -> rho dagger + rho over 2
+        rho = add(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff, maxdim = max_rho_D)/2 # fix hermiticity with rho -> rho dagger + rho over 2
         rho = rho/tr(rho) # fix the trace to 1 again
         
         if (step % measure_every == 0) || (step == max_steps)
@@ -153,7 +156,7 @@ function run_ATDDMRG()
             # Measure the observables
             push!(step_num_list, step)
             push!(max_bond_list, maxlinkdim(rho))
-            push!(max_bond_list, mean(linkdims(rho)))
+            push!(avg_bond_list, mean(linkdims(rho)))
             for idx in 1:N
                 push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
             end
@@ -162,10 +165,12 @@ function run_ATDDMRG()
             end
 
             # Write the state to file
-            write(file, "rho_$(step)", rho)
+            # write(file, "rho_$(step)", rho)
 
             # Refresh time variable and print statement
-            println("Step $(step) finished, Time = $(time()-t), Average Step Time = $((time() - t)/measure_every)\n")            
+            tmp_time_measurement = (time() - t)/measure_every
+            push!(avg_step_time, tmp_time_measurement)
+            println("Step $(step) finished, Time = $(time()-t), Average Step Time = $(tmp_time_measurement), Linkdims = $(linkdims(rho))\n")            
             flush(stdout)
             t = time()
 
@@ -173,16 +178,18 @@ function run_ATDDMRG()
 
     end
 
-    # Write observable lists to file
+    # Write observable lists to file and the last density matrix
     write(file, "step_num_list", step_num_list)
     write(file, "max_bond_list", max_bond_list)
     write(file, "avg_bond_list", avg_bond_list)
+    write(file, "avg_step_time", avg_step_time)
     for idx in 1:N
         write(file, "z_list_$(idx)", z_list[idx])
     end
     if N <= 8
         write(file, "ee_list", ee_list)
     end
+    write(file, "rho", rho)
 
     # Sparse matrix evolution if required
     if sparse_evol
