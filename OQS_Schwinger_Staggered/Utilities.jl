@@ -1853,3 +1853,14 @@ function get_dirac_vacuum_density_matrix(sites)
     return outer(mps', mps)
 
 end
+
+function get_total_charge_reduced_operator_sparse(N)
+
+    res = sparse(I, binomial(N, div(N, 2)), binomial(N, div(N, 2)))
+    for i in 1:N
+        res += project_zeroq(0.5*(-1)^(i-1)*sparse(I, 2^N, 2^N) + 0.5*get_op(["Z"], [i], N))
+    end
+
+    return res
+
+end
