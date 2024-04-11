@@ -77,7 +77,7 @@ function get_Hz(sites, x, l_0, mg)
 
 end
 
-function get_exp_Ho(sites, a, x)::Vector{ITensor}
+function get_exp_Ho(sites, a)::Vector{ITensor}
 
     """
 
@@ -105,7 +105,7 @@ function get_exp_Ho(sites, a, x)::Vector{ITensor}
 
 end
 
-function get_exp_He(sites, a, x)::Vector{ITensor}
+function get_exp_He(sites, a)::Vector{ITensor}
 
     """
 
@@ -143,24 +143,114 @@ function get_Hamiltonian(sites, x, l_0, mg)
         
         for k in n+1:N
             
-            opsum += 4*0.5*(N-k),"Sz",n,"Sz",k
+            opsum += 0.5*(N-k),"Z",n,"Z",k
 
         end
 
         opsum += x,"S+",n,"S-",n+1
         opsum += x,"S-",n,"S+",n+1
 
-        opsum += 2*(N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Sz",n
+        opsum += (N/4 - 0.5*ceil((n-1)/2) + l_0*(N-n)),"Z",n
         
-        opsum += 2*(mg*sqrt(x)*(-1)^(n-1)),"Sz",n
+        opsum += (mg*sqrt(x)*(-1)^(n-1)),"Z",n
 
     end
 
-    opsum += 2*(mg*sqrt(x)*(-1)^(N-1)),"Sz",N
+    opsum += (mg*sqrt(x)*(-1)^(N-1)),"Z",N
 
     opsum += ((l_0^2)*(N-1) + (l_0*N/2) + (N^2)/8),"Id",1
 
     return MPO(opsum, sites)
+
+end
+
+function get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
+
+    """
+
+    This gives aH as a sparse Hamiltonian and here we will also add the penalty term
+
+    """
+
+    eye(n::Int64) = sparse(I, n, n);
+
+    H = spzeros(2^(N), 2^(N))
+
+    # Kinetic term
+    for n=1:N-1
+        H += (1/4)*get_op(["X", "X"], [n, n+1], N)
+        H += (1/4)*get_op(["Y", "Y"], [n, n+1], N)
+    end
+
+    # Long range ZZ interaction term
+    for n = 1:N-1
+        for m = n+1:N
+            H += (0.25/x)*(N - m + lambda)*get_op(["Z", "Z"], [n, m], N)
+        end
+    end
+
+    # # Mass term
+    for n=1:N
+        H += (0.5*ma)*((-1)^(n-1))*get_op(["Z"], [n], N)
+    end
+
+    # Electric single Z term
+    for n=1:N-1
+        H += ((N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2)/x)*get_op(["Z"], [n], N)
+    end
+
+    # # Constant term
+    H += ((l_0^2)*(N-1)/(2*x) + (l_0*N/(4*x)) + (N^2)/(16*x) + lambda*N/(8*x))*eye(2^N)
+
+    return H
+end
+
+function get_aH_Hamiltonian(sites, x, l_0, ma, lambda)
+
+    """
+    This gives aH Hamiltonian
+    """
+
+    N = length(sites)
+
+    opsum = OpSum()
+
+    for n in 1:N-1
+        
+        for m in n+1:N
+            
+            # Long range ZZ interaction term
+            opsum += 0.25*(1/x)*(N-m+lambda),"Z",n,"Z",m
+
+        end
+
+        # Kinetic term
+        opsum += 0.5,"S+",n,"S-",n+1
+        opsum += 0.5,"S-",n,"S+",n+1
+
+        opsum += (1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n
+        
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n
+
+    end
+
+    opsum += (0.5*ma*(-1)^(N-1)),"Z",N
+
+    opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",1
+
+    return MPO(opsum, sites)
+
+end
+
+
+function mpo_to_matrix(mpo)
+
+    n = length(mpo)
+    a = contract(mpo)
+    a = Array(a, inds(a; :plev => 1)..., inds(a; :plev => 0)...)
+    a = reshape(a, 2^n, 2^n)
+
+    return a
 
 end
 
@@ -353,6 +443,116 @@ function get_Z_configuration(psi)
 
 end
 
+
+function my_kron(A, B)
+    
+    m, n = size(A)
+    p, q = size(B)
+
+    C = zeros(ComplexF64, m * p, n * q)
+
+    for i in 1:p
+        for j in 1:q
+            C[(i-1)*m+1 : i*m, (j-1)*n+1 : j*n] = A * B[i, j]
+        end
+    end
+
+    return C
+end
+
+function get_op(ops, positions, N; reverse_flag = true)
+
+    op_dict = Dict("X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]), "S-" => sparse([0 0; 1 0]), "S+" => sparse([0 1; 0 0]))
+    zipped = TupleTools.sort(Tuple(zip(1:length(ops), positions, ops)); by = x -> x[2])
+    old_positions = [element[2] for element in zipped] 
+    old_ops = [element[3] for element in zipped]
+
+    positions = []
+    ops = []
+
+    if length(Set(old_positions)) != length(old_positions) # case where we have duplicate positions
+        
+        flag = false
+
+        for (idx, pos) in enumerate(old_positions)
+
+            if flag
+
+                flag = false
+                continue
+
+            end
+
+            if idx != length(old_positions)
+
+                if pos != old_positions[idx+1]
+
+                    push!(positions, pos)
+                    push!(ops, op_dict[old_ops[idx]])
+
+                else
+
+                    push!(positions, pos)
+                    push!(ops, op_dict[old_ops[idx]]*op_dict[old_ops[idx+1]])
+                    flag = true
+
+                end
+
+            else
+
+                push!(positions, pos)
+                push!(ops, op_dict[old_ops[idx]])
+
+            end
+
+        end
+
+    else
+
+        for (idx, pos) in enumerate(old_positions)
+
+            push!(positions, pos)
+            push!(ops, op_dict[old_ops[idx]])
+        
+        end
+
+    end
+
+    eye(n) = sparse(I, n, n)
+
+    res = eye(1)
+
+    for (i, pos) in enumerate(positions)
+
+        if i == 1
+            how_many_I_before = pos-1
+        else
+            how_many_I_before = pos - positions[i-1] - 1
+        end
+
+        pos = positions[i]
+        op = ops[i]
+    
+        if reverse_flag
+            res = my_kron(res, eye(2^how_many_I_before))
+            res = my_kron(res, op)
+        else
+            res = kron(res, eye(2^how_many_I_before))
+            res = kron(res, op)
+        end
+
+    end
+
+    if reverse_flag
+        res = my_kron(res, eye(2^(N - positions[end])))
+    else
+        res = kron(res, eye(2^(N - positions[end])))
+    end
+
+    return res
+
+end
+
 function get_charge_and_electric_field_configurations(psi, l_0)
 
     Z_configuration = get_Z_configuration(psi)
@@ -402,5 +602,15 @@ function get_particle_number_MPO(sites)
     mpo = MPO(opsum, sites)
 
     return mpo
+
+end
+
+function get_dirac_vacuum_mps(sites)
+
+    N = length(sites)
+    state = [isodd(n) ? "1" : "0" for n = 1:N] 
+    mps = MPS(sites, state)
+   
+    return mps
 
 end

@@ -11,18 +11,18 @@ using Statistics
 include("Utilities.jl")
 ITensors.disable_warn_order()
 
-N = 10
+N = 14
 tau = 0.1 # 1/N^2 # time step in time evolution rho -> exp(-tau L) after one step
 cutoff = 1e-16 # cutoff for SVD
 max_rho_D = 100
-max_steps = 100
+max_steps = 3
 tol = 1e-9 # tolerance for DMRG convergence and ATDDMRG convergence
-e = 1
+e = 0.8
 x = 1/(e)^2
-ma = 0
-l_0 = 0
+ma = 0.5
+l_0 = 0.0
 lambda = 0.0
-aD_0 = 0
+aD_0 = 1
 beta = 0.001
 aT = 1/beta
 sigma_over_a = 3.0
@@ -41,20 +41,20 @@ function run_ATDDMRG()
     # Prepare initial rho
     # println("Initializing with the MPO corresponding to the ground state of H_system\n")
     sites = siteinds("S=1/2", N, conserve_qns = true)
-    state = [isodd(n) ? "0" : "1" for n = 1:N]
-    mps = randomMPS(sites, state)
-    H = get_aH_Hamiltonian(sites, x, l_0_initial, ma, lambda)
-    sweeps = Sweeps(max_steps; maxdim = 100)
-    observer = DMRGObserver(;energy_tol = tol)
-    gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true)
+    # state = [isodd(n) ? "0" : "1" for n = 1:N]
+    # mps = randomMPS(sites, state)
+    # H = get_aH_Hamiltonian(sites, x, l_0_initial, ma, lambda)
+    # sweeps = Sweeps(max_steps; maxdim = D)
+    # observer = DMRGObserver(;energy_tol = tol)
+    # gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true)
     # println("The ground state energy was found to be $(gs_energy)\n")
-    rho = outer(gs', gs; cutoff = cutoff)
+    # rho = outer(gs', gs; cutoff = cutoff)
 
     # Test Dirac vacuum as initial state
     # state = [isodd(n) ? "1" : "0" for n = 1:N]
     # mps = MPS(sites, state)
     # rho = outer(mps', mps; cutoff = cutoff)
-    # rho = get_dirac_vacuum_density_matrix(sites)
+    rho = get_dirac_vacuum_density_matrix(sites)
 
     L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
     println("The expectation value of the taylor expanded part of the Lindblad operator is $(real(inner(L_taylor_expanded_part_tmp, rho)))\n")
@@ -106,12 +106,53 @@ function run_ATDDMRG()
 
         println("The step is ", step)
         
-        apply_odd!(odd_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+        if step == 1
+
+            apply_odd!(odd_gates_2, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+
         
-        rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
-        
-        apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+
             
+        elseif step == max_steps
+        
+            apply_odd!(odd_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            apply_odd!(odd_gates_2, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+
+                
+        else
+
+            apply_odd!(odd_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+
+
+        end
+
         # Take care of hermiticity and positivity of the density matrix
         rho = add(dag(swapprime(rho, 0, 1)), rho; cutoff = cutoff, maxdim = max_rho_D)/2 # fix hermiticity with rho -> rho dagger + rho over 2
         rho = rho/tr(rho)
@@ -124,15 +165,13 @@ function run_ATDDMRG()
 
             # println("The L_taylor*dt/2 should be much less than one: $(real(inner(L_taylor_expanded_part_tmp, rho))*tau/2)\n")
 
-            # println("The L_taylor*dt/2 should be much less than one: $(real(inner(L_taylor_expanded_part_tmp, rho))*tau/2)\n")
-
             # println("The trace should always be 1: ", tr(rho))
 
             # Measure the observables
-            push!(step_num_list, step)
-            push!(avg_bond_list, mean(linkdims(rho)))
+            # push!(step_num_list, step)
+            # push!(avg_bond_list, mean(linkdims(rho)))
             push!(particle_number, real(tr(apply(rho, particle_number_mpo))))
-            push!(max_bond_list, maxlinkdim(rho))
+            # push!(max_bond_list, maxlinkdim(rho))
             if get_state_diff_norm
                 push!(state_list, project_zeroq(mpo_to_matrix(rho)))
             end
@@ -144,12 +183,12 @@ function run_ATDDMRG()
 
             # sum_for_z = 0
 
-            for idx in 1:N
-                exp_val_z = real(tr(apply(rho, z_mpo[idx])))
-                # exp_val_z = real(tr(project_zeroq(mpo_to_matrix(rho))*project_zeroq(mpo_to_matrix(z_mpo[idx]))))
-                # sum_for_z += exp_val_z
-                push!(z_list[idx], exp_val_z)
-            end
+            # for idx in 1:N
+            #     exp_val_z = real(tr(apply(rho, z_mpo[idx])))
+            #     # exp_val_z = real(tr(project_zeroq(mpo_to_matrix(rho))*project_zeroq(mpo_to_matrix(z_mpo[idx]))))
+            #     # sum_for_z += exp_val_z
+            #     push!(z_list[idx], exp_val_z)
+            # end
 
             # println("The total charge should be 0: ", sum(sum_for_z))
             # push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
@@ -171,6 +210,8 @@ function run_ATDDMRG()
         end
 
     end
+
+    println("The final ee is: ", get_entanglement_entropy_mpo(rho, 1:div(N, 2), sites))
 
     # Prepare the initial state and the Z observable at the middle of the lattice to be tracked
     if get_sparse
@@ -231,12 +272,12 @@ function run_ATDDMRG()
     display(p1)
 
     p5 = plot()
-    particle_number_from_z = []
-    for t_idx in 1:max_steps+1
-        push!(particle_number_from_z, 0.5*N + sum([z_list[i][t_idx]*(-1)^(i-1)*0.5 for i in 1:N]))
-    end
+    # particle_number_from_z = []
+    # for t_idx in 1:max_steps+1
+    #     push!(particle_number_from_z, 0.5*N + sum([z_list[i][t_idx]*(-1)^(i-1)*0.5 for i in 1:N]))
+    # end
     title!("Particle Number vs step number\nN = $(N), tau = $(tau), cutoff = $(cutoff)")
-    plot!(p5, particle_number_from_z, label = "from Z")
+    # plot!(p5, particle_number_from_z, label = "from Z")
     plot!(p5, particle_number, label = "direct", linestyle = :dash)
     if get_sparse
         plot!(p5, particle_number_sparse, label = "sparse")
