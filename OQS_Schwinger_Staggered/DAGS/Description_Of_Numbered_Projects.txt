@@ -17,4 +17,43 @@ Producing plot for time per iteration vs 1/N
 5
 
 At N = 10 for fixed parameters change the cutoff to see how the maximum and average bond dimensions behave
+quenching from the dirac vacuum
+
+6 
+
+Now that I corrected the functions eg of the initial state I will reproduce project 5 results maybe with slightly different
+m and g coming from Guiseppe's paper and I have also noticed that a small time step keeps the bond dimension very small I guess
+until I evolve long enough. Note here we are quenching the electric field keeping the lattice mass constant. In the future we want
+to quench also the mass and also keep track of the mass shift.
+
+7 
+
+Was for N = 50 and very small cutoff but the jobs were running out of memory because the state was written at every iteration so all jobs
+were forced to stop
+
+8
+
+N = 8 with sparse as well to compare for different cutoffs and l_0 values.
+The problem here which caused the jobs to diverge was that too high l_0 values cause the L_taylor*tau (tau = 0.01) to be
+very large so the approximation was not good and the stability was lost
+
+9 
+
+Simple example with a reasonable l_0 value of [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]  at N = 8 to follow up from project 8
+
+10
+
+This is to focus on only changing N and measuring the maximum entropy reached hopefully of the steady state so as to probe the scaling
+of the entanglement entropy of the steady state vs N
+
+11
+
+Checking the closed case although we can do the closed case with MPS anyhow so we don't have to care much about it
+but we will give it different tau but same total time
+
+12 
+
+This is about reproducing results from slides 72, 73 quenching the GS of H within closed and open systems 
+for N = 8, 10, 12, e = 1, l_0 = -1, ma = -0.1, aD_0 = 0, 0.5, beta = 0.1, corr = delta, tau needs to be set carefully
+we will go up to at = 6 and we need a tau of 0.01 such that Ltaylor*dt/2 is much less than 1 so we need 600 steps
 

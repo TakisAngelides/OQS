@@ -33,7 +33,7 @@ max_sweeps = parse(Int, ARGS[19])
 sparse_evol = parse(Bool, ARGS[20])
 l_0_initial_state = parse(Float64, ARGS[21])
 dirac_vacuum_initial_state = parse(Bool, ARGS[22])
-max_rho_D = 200
+max_rho_D = parse(Int, ARGS[23])
 
 function run_ATDDMRG()
 
@@ -96,12 +96,12 @@ function run_ATDDMRG()
     if N <= 8
         ee_list = Float64[]
     end
-    step_num_list = Int[]
+    at_list = Float64[]
     z_mpo = [MPO(get_Z_site_operator(idx), sites) for idx in 1:N]
     z_list = [Float64[] for _ in 1:N]
 
     # Push into the lists the initial state observables
-    push!(step_num_list, 0)
+    push!(at_list, 0.0)
     push!(max_bond_list, maxlinkdim(rho))
     push!(avg_bond_list, mean(linkdims(rho)))
     for idx in 1:N
@@ -154,7 +154,7 @@ function run_ATDDMRG()
         if (step % measure_every == 0) || (step == max_steps)
 
             # Measure the observables
-            push!(step_num_list, step)
+            push!(at_list, at_list[end] + tau*measure_every)
             push!(max_bond_list, maxlinkdim(rho))
             push!(avg_bond_list, mean(linkdims(rho)))
             for idx in 1:N
@@ -179,7 +179,7 @@ function run_ATDDMRG()
     end
 
     # Write observable lists to file and the last density matrix
-    write(file, "step_num_list", step_num_list)
+    write(file, "at_list", at_list)
     write(file, "max_bond_list", max_bond_list)
     write(file, "avg_bond_list", avg_bond_list)
     write(file, "avg_step_time", avg_step_time)

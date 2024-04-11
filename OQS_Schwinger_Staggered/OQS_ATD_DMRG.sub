@@ -2,7 +2,7 @@ environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULI
 
 executable = /lustre/fs24/group/cqta/tangelides/julia-1.10.0/bin/julia
 
-arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(ma) $(max_steps) $(project_number) $(h5_path) $(measure_every) $(h5_previous_path) $(D) $(lambda) $(aD_0) $(aT) $(sigma_over_a) $(env_corr_type) $(max_sweeps) $(sparse_evol) $(l_0_initial_state) $(dirac_vacuum_initial_state)
+arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(ma) $(max_steps) $(project_number) $(h5_path) $(measure_every) $(h5_previous_path) $(D) $(lambda) $(aD_0) $(aT) $(sigma_over_a) $(env_corr_type) $(max_sweeps) $(sparse_evol) $(l_0_initial_state) $(dirac_vacuum_initial_state) $(max_rho_D)
 
 transfer_input_files = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl
 
@@ -13,9 +13,11 @@ should_transfer_files = IF_NEEDED
 
 # request_memory = $(mem)
 
-# +RequestRuntime = 6.99*24*3600
+request_memory = 5G
 
-# max_retries = 5
++RequestRuntime = 6.99*24*3600
+
+# max_retries = 1
 
 error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff).error
 
