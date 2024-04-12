@@ -57,3 +57,7 @@ This is about reproducing results from slides 72, 73 quenching the GS of H withi
 for N = 8, 10, 12, e = 1, l_0 = -1, ma = -0.1, aD_0 = 0, 0.5, beta = 0.1, corr = delta, tau needs to be set carefully
 we will go up to at = 6 and we need a tau of 0.01 such that Ltaylor*dt/2 is much less than 1 so we need 600 steps
 
+13 
+
+Test the pulse field
+

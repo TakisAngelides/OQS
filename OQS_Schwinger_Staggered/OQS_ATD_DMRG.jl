@@ -34,6 +34,17 @@ sparse_evol = parse(Bool, ARGS[20])
 l_0_initial_state = parse(Float64, ARGS[21])
 dirac_vacuum_initial_state = parse(Bool, ARGS[22])
 max_rho_D = parse(Int, ARGS[23])
+l_0_small = parse(Float64, ARGS[24])
+Omega = parse(Float64, ARGS[25])
+omega = parse(Float64, ARGS[26])
+
+function get_applied_field(at, l_0, l_0_small, Omega, omega)
+
+    # we consider a strong and slow electric field pulse superimposed by a weak and fast pulse
+    # E_S >> E >> epsilon > 0 and m >> omega >> Omega > 0 which implies l_0 >> l_0_small
+    return l_0/cosh(Omega*at)^2 + l_0_small/cosh(omega*at)^2
+
+end
 
 function run_ATDDMRG()
 
@@ -59,12 +70,12 @@ function run_ATDDMRG()
             rho_initial = outer(gs', gs; cutoff = cutoff)
             println("The ground state energy was found to be $(gs_energy)\n")
         end
-        rho = copy(rho_initial)
-        L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
-        L_taylor_expectation_value = real(inner(L_taylor_expanded_part_tmp, rho))
-        println("The expectation value of the taylor expanded part of the Lindblad operator is $(L_taylor_expectation_value)\n")
-        println("The L_taylor*tau/2 should be much less than one: $(L_taylor_expectation_value*tau/2)\n")
-        println("The trace of initial rho should be 1: $(tr(rho))\n")
+        rho = rho_initial
+        # L_taylor_expanded_part_tmp = get_L_taylor(sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT)
+        # L_taylor_expectation_value = real(inner(L_taylor_expanded_part_tmp, rho))
+        # println("The expectation value of the taylor expanded part of the Lindblad operator is $(L_taylor_expectation_value)\n")
+        # println("The L_taylor*tau/2 should be much less than one: $(L_taylor_expectation_value*tau/2)\n")
+        # println("The trace of initial rho should be 1: $(tr(rho))\n")
         flush(stdout)
 
     else 
@@ -118,32 +129,36 @@ function run_ATDDMRG()
     # write(file, "rho_0", rho)
 
     t = time()
+    at = 0
     for step in 1:max_steps
 
         println("Step $(step) begins")
         flush(stdout)
+
+        at += tau
+        applied_field = get_applied_field(at, l_0, l_0_small, Omega, omega)
         
         if step == 1
 
             apply_odd!(odd_gates_2, rho; cutoff = cutoff, max_rho_D = max_rho_D)        
-            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, applied_field, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
             apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
-            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)            
+            rho = apply_taylor_part(rho, tau, sites, x, applied_field, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)            
         
         elseif step == max_steps
         
             apply_odd!(odd_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
-            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, applied_field, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
             apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
-            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, applied_field, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
             apply_odd!(odd_gates_2, rho; cutoff = cutoff, max_rho_D = max_rho_D)
                 
         else
 
             apply_odd!(odd_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
-            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, applied_field, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
             apply_even!(even_gates, rho; cutoff = cutoff, max_rho_D = max_rho_D)
-            rho = apply_taylor_part(rho, tau, sites, x, l_0, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
+            rho = apply_taylor_part(rho, tau, sites, x, applied_field, ma, aD_0, sigma_over_a, env_corr_type, aT; cutoff = cutoff, max_rho_D = max_rho_D)
 
         end
 
