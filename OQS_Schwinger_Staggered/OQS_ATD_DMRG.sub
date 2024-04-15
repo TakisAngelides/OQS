@@ -11,9 +11,11 @@ should_transfer_files = IF_NEEDED
 # if no units are specified here, MB are considered
 # mem = 10*(4*(2*$(N)*$(D)*$(D)*16*2/1e6)+1000)
 
-# request_memory = $(mem)
+request_memory = 32G
 
-# +RequestRuntime = 6.99*24*3600
+request_cpus = 4
+
++RequestRuntime = 6.99*24*3600
 
 # max_retries = 5
 

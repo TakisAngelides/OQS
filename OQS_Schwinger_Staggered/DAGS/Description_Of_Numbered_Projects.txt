@@ -18,3 +18,6 @@ Producing plot for time per iteration vs 1/N
 
 At N = 10 for fixed parameters change the cutoff to see how the maximum and average bond dimensions behave
 
+15 
+
+This is to comparing to pulse field project 14 in branch time_varying_l0
