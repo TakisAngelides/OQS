@@ -61,3 +61,7 @@ we will go up to at = 6 and we need a tau of 0.01 such that Ltaylor*dt/2 is much
 
 Test the pulse field
 
+14
+
+N = 20 pulse field different cutoff
+

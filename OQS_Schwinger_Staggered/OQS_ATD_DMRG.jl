@@ -238,10 +238,6 @@ function run_ATDDMRG()
         # Prepare the initial state and the Z observable at the middle of the lattice to be tracked
         z_op = [project_zeroq(get_op(["Z"], [idx], N)) for idx in 1:N]
         
-        # Get the Lindblad operator and its exponential which is the evolution operator
-        L = get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
-        evolution_operator = exp(Matrix(L)*tau)
-        
         # Prepare the list to store the tracked observables and get the initial state values
         rhodim = Int(binomial(N, div(N, 2)))
         if N <= 8
@@ -253,7 +249,14 @@ function run_ATDDMRG()
         end
         
         # Do the evolution
-        for _ in 1:max_steps
+        at = 0
+        for step in 1:max_steps
+
+            # Get the Lindblad operator and its exponential which is the evolution operator
+            at += tau
+            applied_field = get_applied_field(at, l_0, l_0_small, Omega, omega)
+            L = get_Lindblad_reduced_sparse_matrix(N, x, ma, applied_field, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+            evolution_operator = exp(Matrix(L)*tau)
 
             # One time step evolution
             rho_v = evolution_operator*rho_v
