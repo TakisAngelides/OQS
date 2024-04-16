@@ -99,11 +99,11 @@ def write_dag():
                                                                 f.write('RETRY ' + job_name + ' 3\n')
                                                                 counter += 1
                                                                 
-                                                                if tau_idx != 0:
+                                                                # if tau_idx != 0:
                                                                     
-                                                                    tau_previous_text = str(tau_previous).replace('.', '')
-                                                                    previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
-                                                                    f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
+                                                                #     tau_previous_text = str(tau_previous).replace('.', '')
+                                                                #     previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
+                                                                #     f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
                                                                         
     print(f'Number of jobs: {counter}')
 
