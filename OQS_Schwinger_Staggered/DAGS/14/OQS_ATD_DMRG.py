@@ -290,12 +290,12 @@ def make_plots_from_df():
                         
                             at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
                                                                                         
-                            plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}')
+                            plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, max = {max(pn_list)}')
                             plt.title('PND vs at')
                         
-                        plt.legend()
-                        plt.savefig(f'Plots/pnd_vs_at_aD_0_{aD_0}.png')
-                        plt.clf()
+                    plt.legend(fontsize = 6)
+                    plt.savefig(f'Plots/pnd_vs_at.png')
+                    plt.clf()
                     
                                                             
 # write_dag()
