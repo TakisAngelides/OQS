@@ -3,6 +3,7 @@ import os
 import h5py
 import matplotlib.pyplot as plt
 import pandas as pd
+from cycler import cycler
 
 sub_file_name = 'OQS_ATD_DMRG.sub'
 path_to_repo = '/lustre/fs24/group/cqta/tangelides/OQS'
@@ -140,7 +141,7 @@ def make_plots():
     for filepath in os.listdir(f'{path_to_project}/DAGS/{project_number}/HDF5'):
         
         try:
-                        
+            
             file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
             
             row = filepath[:-3].strip().split('_')
@@ -169,11 +170,11 @@ def make_plots():
             if N <= 8:
                 z_list_sparse = [file[f'z_list_sparse_{idx}'][()] for idx in range(1, N+1)]
         
-            # print('-------------------------------------------------------------------------------------------------------------------------')
-            # print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' was found.')
-            # print(filepath)
-            # print(file.keys())
-            # print('-------------------------------------------------------------------------------------------------------------------------')
+            print('-------------------------------------------------------------------------------------------------------------------------')
+            print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' was found.')
+            print(filepath)
+            print(file.keys())
+            print('-------------------------------------------------------------------------------------------------------------------------')
                         
         except:
             
@@ -279,25 +280,30 @@ def make_plots_from_df():
     #                 plt.close()
     
     
+    plt.rc('axes', prop_cycle=(cycler('color', list('rbgk')) + cycler('linestyle', ['-', '--', ':', '-.'])))
+    
     for N in df.N.unique():
         for x in df.x.unique():
             for l_0 in df.l_0.unique():
                 for ma in df.ma.unique():
                     for aD_0 in df.aD_0.unique():
-                        for cutoff in df.cutoff.unique():
+                        for aT in df.aT.unique():
+                            for cutoff in df.cutoff.unique():
                     
-                            df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff)]
+                                df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff) & (df.aT == aT)]
+                            
+                                at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
+                                
+                                try:                                                 
+                                    plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, max = {max(pn_list)}')
+                                except:
+                                    print(f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT} gave an error.')
+                                plt.title('PND vs at')
                         
-                            at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
-                                                                                        
-                            plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, max = {max(pn_list)}')
-                            plt.title('PND vs at')
-                        
-                    plt.legend(fontsize = 6)
-                    plt.savefig(f'Plots/pnd_vs_at.png')
-                    plt.clf()
-                    
-                                                            
-write_dag()
-# make_plots()
-# make_plots_from_df()
+                        plt.legend(fontsize = 6)
+                        plt.savefig(f'Plots/pnd_vs_at_aD_0_{aD_0}.png')
+                        plt.clf()
+                                                                          
+# write_dag()
+make_plots()
+make_plots_from_df()
