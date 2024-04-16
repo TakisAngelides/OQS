@@ -2,7 +2,7 @@ environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULI
 
 executable = /lustre/fs24/group/cqta/tangelides/julia-1.10.0/bin/julia
 
-arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(ma) $(max_steps) $(project_number) $(h5_path) $(measure_every) $(h5_previous_path) $(D) $(lambda) $(aD_0) $(aT) $(sigma_over_a) $(env_corr_type) $(max_sweeps) $(sparse_evol) $(l_0_initial_state) $(dirac_vacuum_initial_state)
+arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(ma) $(max_steps) $(project_number) $(h5_path) $(measure_every) $(h5_previous_path) $(D) $(lambda) $(aD_0) $(aT) $(sigma_over_a) $(env_corr_type) $(max_sweeps) $(sparse_evol) $(l_0_initial_state) $(dirac_vacuum_initial_state) $(max_rho_D)
 
 transfer_input_files = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Staggered/OQS_ATD_DMRG.jl
 

@@ -16,7 +16,7 @@ tau_list = [0.01] # time step size
 tau_previous_list = [0 for _ in range(len(tau_list))] # this can be left untouched for having every time step size independent
 max_steps_list = [600] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
 measure_every_list = [1] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
-cutoff_list = [1e-6, 1e-9] # this is for compression after gate application
+cutoff_list = [1e-6, 1e-9, 1e-11] # this is for compression after gate application
 tol_list = [1E-16] # tol for dmrg stopping condition
 x_list = [1] # [np.round(1/0.8**2, 6)]
 ma_list = [-0.1]
@@ -95,7 +95,7 @@ def write_dag():
                                                                     
                                                                     job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
                                                                     f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
-                                                                    f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}"\n')
+                                                                    f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}" dirac_vacuum_initial_state="{dirac_vacuum_initial_state}" max_rho_D="{max_rho_D}"\n')
                                                                     f.write('RETRY ' + job_name + ' 3\n')
                                                                     counter += 1
                                                                     

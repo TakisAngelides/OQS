@@ -33,7 +33,7 @@ max_sweeps = parse(Int, ARGS[19])
 sparse_evol = parse(Bool, ARGS[20])
 l_0_initial_state = parse(Float64, ARGS[21])
 dirac_vacuum_initial_state = parse(Bool, ARGS[22])
-max_rho_D = 200
+max_rho_D = parse(Int, ARGS[23])
 
 function run_ATDDMRG()
 
@@ -158,7 +158,9 @@ function run_ATDDMRG()
             push!(max_bond_list, maxlinkdim(rho))
             push!(avg_bond_list, mean(linkdims(rho)))
             for idx in 1:N
-                push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
+                exp_Z_val_tmp = real(tr(apply(rho, z_mpo[idx])))
+                println("Exp of Z: idx=$(idx),val=$(exp_Z_val_tmp)")
+                push!(z_list[idx], exp_Z_val_tmp)
             end
             if N <= 8
                 push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
