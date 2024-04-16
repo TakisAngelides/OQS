@@ -130,47 +130,47 @@ def make_plots():
                   
     for filepath in os.listdir(f'{path_to_project}/DAGS/{project_number}/HDF5'):
         
-        # try:
+        try:
                         
-        file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
-        
-        row = filepath[:-3].strip().split('_')
-        N, tau, x, l_0, ma, env, sig, aT, lam, aD_0, l_0_init, cutoff = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19], row[21], row[23]
-        N = int(N)
-        tau = float(tau)
-        x = float(x)
-        l_0 = float(l_0)
-        ma = float(ma)
-        sig = float(sig)
-        aT = float(aT)
-        lam = float(lam)
-        aD_0 = float(aD_0)
-        l_0_init = float(l_0_init)
-        
-        if 'max_bond_list' not in file.keys():
-            continue
-        max_bond_list = file['max_bond_list'][()]
-        at_list = file['at_list'][()]
-        if max(N_list) <= 8:
-            ee_list = file['ee_list'][()]
-        avg_bond_list = file['avg_bond_list'][()]
-        avg_step_time = file['avg_step_time'][()][1:]
-        z_list = [file[f'z_list_{idx}'][()] for idx in range(1, N+1)]
-        if N <= 8:
-            z_list_sparse = [file[f'z_list_sparse_{idx}'][()] for idx in range(1, N+1)]
-        
-            # print('-------------------------------------------------------------------------------------------------------------------------')
-            # print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' was found.')
-            # print(filepath)
-            # print(file.keys())
-            # print('-------------------------------------------------------------------------------------------------------------------------')
-                        
-        # except:
+            file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
             
-        #     # print('*************************************************************************************************************************')
-        #     print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' gave an error.')
-        #     # print('*************************************************************************************************************************')
-        #     continue
+            row = filepath[:-3].strip().split('_')
+            N, tau, x, l_0, ma, env, sig, aT, lam, aD_0, l_0_init, cutoff = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19], row[21], row[23]
+            N = int(N)
+            tau = float(tau)
+            x = float(x)
+            l_0 = float(l_0)
+            ma = float(ma)
+            sig = float(sig)
+            aT = float(aT)
+            lam = float(lam)
+            aD_0 = float(aD_0)
+            l_0_init = float(l_0_init)
+            
+            if 'max_bond_list' not in file.keys():
+                continue
+            max_bond_list = file['max_bond_list'][()]
+            at_list = file['step_num_list'][()]*tau
+            if max(N_list) <= 8:
+                ee_list = file['ee_list'][()]
+            avg_bond_list = file['avg_bond_list'][()]
+            avg_step_time = file['avg_step_time'][()][1:]
+            z_list = [file[f'z_list_{idx}'][()] for idx in range(1, N+1)]
+            if N <= 8:
+                z_list_sparse = [file[f'z_list_sparse_{idx}'][()] for idx in range(1, N+1)]
+            
+                # print('-------------------------------------------------------------------------------------------------------------------------')
+                # print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' was found.')
+                # print(filepath)
+                # print(file.keys())
+                # print('-------------------------------------------------------------------------------------------------------------------------')
+                        
+        except:
+            
+            # print('*************************************************************************************************************************')
+            print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' gave an error.')
+            # print('*************************************************************************************************************************')
+            continue
                     
         plt.plot(at_list, max_bond_list)
         plt.ylabel('Maximum bond dimension')
@@ -283,9 +283,9 @@ def make_plots_from_df():
                             plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}')
                             plt.title('PND vs at')
                         
-                        plt.legend()
-                        plt.savefig(f'Plots/pnd_vs_at_aD_0_{aD_0}.png')
-                        plt.clf()
+                    plt.legend()
+                    plt.savefig(f'Plots/pnd_vs_at.png')
+                    plt.clf()
                                                                           
 # write_dag()
 make_plots()
