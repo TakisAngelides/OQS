@@ -10,13 +10,13 @@ path_to_project = f'{path_to_repo}/OQS_Schwinger_Staggered'
 file_to_run = 'OQS_ATD_DMRG.jl'
 name_of_dag = 'OQS_ATD_DMRG'
 
-N_list = [20]
+N_list = [12]
 tau_list = [0.01] # time step size
 # tau_previous_list = [0] + tau_list[:-1] # this can be left untouched for continuing from the previous time step size
 tau_previous_list = [0 for _ in range(len(tau_list))] # this can be left untouched for having every time step size independent
 max_steps_list = [600] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
 measure_every_list = [1] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
-cutoff_list = [1e-6, 1e-9, 1e-11] # this is for compression after gate application
+cutoff_list = [1e-6, 1e-9] # this is for compression after gate application
 tol_list = [1E-16] # tol for dmrg stopping condition
 x_list = [1] # [np.round(1/0.8**2, 6)]
 ma_list = [-0.1]
@@ -31,7 +31,7 @@ max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
 l_0_initial_state = 0.0
 dirac_vacuum_initial_state = "false"
 max_rho_D = 200
-project_number = 15 # <==================================== Important to change according to which project file ================================
+project_number = 16 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
 
@@ -287,6 +287,6 @@ def make_plots_from_df():
                     plt.savefig(f'Plots/pnd_vs_at.png')
                     plt.clf()
                                                                           
-# write_dag()
-make_plots()
-make_plots_from_df()
+write_dag()
+# make_plots()
+# make_plots_from_df()
