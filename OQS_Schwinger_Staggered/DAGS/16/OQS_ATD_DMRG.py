@@ -11,11 +11,11 @@ file_to_run = 'OQS_ATD_DMRG.jl'
 name_of_dag = 'OQS_ATD_DMRG'
 
 N_list = [12]
-tau_list = [0.01] # time step size
+tau_list = [0.01, 0.001] # time step size
 # tau_previous_list = [0] + tau_list[:-1] # this can be left untouched for continuing from the previous time step size
 tau_previous_list = [0 for _ in range(len(tau_list))] # this can be left untouched for having every time step size independent
-max_steps_list = [600] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
-measure_every_list = [1] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
+max_steps_list = [600, 6000] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
+measure_every_list = [1, 10] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
 cutoff_list = [1e-6, 1e-9] # this is for compression after gate application
 tol_list = [1E-16] # tol for dmrg stopping condition
 x_list = [1] # [np.round(1/0.8**2, 6)]
@@ -24,7 +24,7 @@ l_0_list = [-1]
 D_list = [1000] # anyway the dmrg will stop from tol
 lambd_list = [0.0]
 aD_0_list = [0, 0.5]
-aT_list = [10.0]
+aT_list = [5.0, 10.0]
 sigma_over_a_list = [3.0]
 env_corr_type_list = ["delta"]
 max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
@@ -59,7 +59,8 @@ def write_dag():
         
         for N in N_list:            
             for tau_idx, tau in enumerate(tau_list):                
-                tau_previous = tau_previous_list[tau_idx]                
+                tau_previous = tau_previous_list[tau_idx]      
+                max_steps = max_steps_list[tau_idx]
                 for cutoff in cutoff_list:                    
                     for tol in tol_list:                        
                         for x in x_list:                            
@@ -73,37 +74,36 @@ def write_dag():
                                                         for max_sweeps in max_sweeps_list:
                                                             sparse_evol = "true" if (max(N_list) < 8) else "false"
                                                             for ma in ma_list:
-                                                                for max_steps_idx, max_steps in enumerate(max_steps_list):
+                                                                
+                                                                measure_every = measure_every_list[tau_idx]
+                                                                
+                                                                if tau_idx == 0:
+                                                                    h5_previous_path = 'None'
+                                                                else:
+                                                                    h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}_l0init_{l_0_initial_state}_cutoff_{cutoff}.h5'
+                                                                h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}_l0init_{l_0_initial_state}_cutoff_{cutoff}.h5'
+                                                                
+                                                                tau_text = str(tau).replace('.', '')
+                                                                x_text = str(x).replace('.', '')
+                                                                l_0_text = str(l_0).replace('.', '')
+                                                                ma_text = str(ma).replace('.', '')
+                                                                sigma_over_a_text = str(sigma_over_a).replace('.', '')
+                                                                aT_text = str(aT).replace('.', '')
+                                                                lambd_text = str(lambd).replace('.', '')
+                                                                aD_0_text = str(aD_0).replace('.', '')
+                                                                l_0_initial_state_text = str(l_0_initial_state).replace('.', '')
+                                                                
+                                                                job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
+                                                                f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
+                                                                f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}" dirac_vacuum_initial_state="{dirac_vacuum_initial_state}" max_rho_D="{max_rho_D}"\n')
+                                                                f.write('RETRY ' + job_name + ' 3\n')
+                                                                counter += 1
+                                                                
+                                                                if tau_idx != 0:
                                                                     
-                                                                    measure_every = measure_every_list[max_steps_idx]
-                                                                    
-                                                                    if tau_idx == 0:
-                                                                        h5_previous_path = 'None'
-                                                                    else:
-                                                                        h5_previous_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau_previous}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}_l0init_{l_0_initial_state}_cutoff_{cutoff}.h5'
-                                                                    h5_path = f'{path_to_project}/DAGS/{project_number}/HDF5/N_{N}_tau_{tau}_x_{x}_l0_{l_0}_ma_{ma}_env_{env_corr_type}_sig_{sigma_over_a}_aT_{aT}_lam_{lambd}_aD0_{aD_0}_l0init_{l_0_initial_state}_cutoff_{cutoff}.h5'
-                                                                    
-                                                                    tau_text = str(tau).replace('.', '')
-                                                                    x_text = str(x).replace('.', '')
-                                                                    l_0_text = str(l_0).replace('.', '')
-                                                                    ma_text = str(ma).replace('.', '')
-                                                                    sigma_over_a_text = str(sigma_over_a).replace('.', '')
-                                                                    aT_text = str(aT).replace('.', '')
-                                                                    lambd_text = str(lambd).replace('.', '')
-                                                                    aD_0_text = str(aD_0).replace('.', '')
-                                                                    l_0_initial_state_text = str(l_0_initial_state).replace('.', '')
-                                                                    
-                                                                    job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
-                                                                    f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
-                                                                    f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}" dirac_vacuum_initial_state="{dirac_vacuum_initial_state}" max_rho_D="{max_rho_D}"\n')
-                                                                    f.write('RETRY ' + job_name + ' 3\n')
-                                                                    counter += 1
-                                                                    
-                                                                    if tau_idx != 0:
-                                                                        
-                                                                        tau_previous_text = str(tau_previous).replace('.', '')
-                                                                        previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
-                                                                        f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
+                                                                    tau_previous_text = str(tau_previous).replace('.', '')
+                                                                    previous_job_name = f'N_{N}_tau_{tau_previous_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
+                                                                    f.write(f'PARENT ' + previous_job_name + ' CHILD ' + job_name + '\n')
                                                                         
     print(f'Number of jobs: {counter}')
 
