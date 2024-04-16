@@ -159,9 +159,9 @@ function run_ATDDMRG()
             push!(avg_bond_list, mean(linkdims(rho)))
             for idx in 1:N
                 exp_Z_val_tmp = real(tr(apply(rho, z_mpo[idx])))
-                println("Exp of Z: idx=$(idx),val=$(exp_Z_val_tmp)")
-                push!(z_list[idx], exp_Z_val_tmp)
+                push!(z_list[idx], real(tr(apply(rho, z_mpo[idx]))))
             end
+            println("Max exp of Z: val=$(max(z_list))")
             if N <= 8
                 push!(ee_list, get_entanglement_entropy_mpo(rho, div(N, 2)+1:N, sites))
             end
