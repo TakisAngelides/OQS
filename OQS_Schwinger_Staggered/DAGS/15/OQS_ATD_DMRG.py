@@ -109,87 +109,140 @@ def write_dag():
 
 def make_plots():
     
-    columns = ['N', 'x', 'ma', 'l_0_init', 'l_0', 'tau', 'env', 'sig', 'aT', 'lam', 'aD_0', 'step', 'D', 'ee']
+    if max(N_list) <= 8:
+        columns = ['N', 'x', 'ma', 'l_0_init', 'l_0', 'tau', 'env', 'sig', 'aT', 'lam', 'aD_0', 'at', 'D', 'ee', 'pn', 'cutoff']
+    else:
+        columns = ['N', 'x', 'ma', 'l_0_init', 'l_0', 'tau', 'env', 'sig', 'aT', 'lam', 'aD_0', 'at', 'D', 'pn', 'cutoff']
     df = pd.DataFrame(columns = columns)
     
     if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/D_vs_iteration'):
         os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/D_vs_iteration')
+    if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/Avg_D_vs_iteration'):
+        os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/Avg_D_vs_iteration')
     if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/z_vs_iteration'):
         os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/z_vs_iteration')
     if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/ee_vs_iteration'):
         os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/ee_vs_iteration')
+    if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/Avg_step_time_vs_iteration'):
+        os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/Avg_step_time_vs_iteration')
+    if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/Particle_Number_Density_vs_iteration'):
+        os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/Particle_Number_Density_vs_iteration')
                   
     for filepath in os.listdir(f'{path_to_project}/DAGS/{project_number}/HDF5'):
         
-        try:
-            
-            file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
-            
-            row = filepath[:-3].strip().split('_')
-            N, tau, x, l_0, ma, env, sig, aT, lam, aD_0, l_0_init = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19], row[21] 
-            N = int(N)
-            tau = float(tau)
-            x = float(x)
-            l_0 = float(l_0)
-            ma = float(ma)
-            sig = float(sig)
-            aT = float(aT)
-            lam = float(lam)
-            aD_0 = float(aD_0)
-            l_0_init = float(l_0_init)
-                    
-            max_bond_list = file['max_bond_list'][()]
-            step_num_list = file['step_num_list'][()]
+        # try:
+                        
+        file = h5py.File(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}', 'r')
+        
+        row = filepath[:-3].strip().split('_')
+        N, tau, x, l_0, ma, env, sig, aT, lam, aD_0, l_0_init, cutoff = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19], row[21], row[23]
+        N = int(N)
+        tau = float(tau)
+        x = float(x)
+        l_0 = float(l_0)
+        ma = float(ma)
+        sig = float(sig)
+        aT = float(aT)
+        lam = float(lam)
+        aD_0 = float(aD_0)
+        l_0_init = float(l_0_init)
+        
+        if 'max_bond_list' not in file.keys():
+            continue
+        max_bond_list = file['max_bond_list'][()]
+        at_list = file['at_list'][()]
+        if max(N_list) <= 8:
             ee_list = file['ee_list'][()]
-            z_list = [file[f'z_list_{idx}'][()] for idx in range(1, N+1)]
-            
+        avg_bond_list = file['avg_bond_list'][()]
+        avg_step_time = file['avg_step_time'][()][1:]
+        z_list = [file[f'z_list_{idx}'][()] for idx in range(1, N+1)]
+        if N <= 8:
+            z_list_sparse = [file[f'z_list_sparse_{idx}'][()] for idx in range(1, N+1)]
+        
             # print('-------------------------------------------------------------------------------------------------------------------------')
             # print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' was found.')
             # print(filepath)
             # print(file.keys())
             # print('-------------------------------------------------------------------------------------------------------------------------')
                         
-        except:
+        # except:
             
-            # print('*************************************************************************************************************************')
-            print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' was not found.')
-            # print('*************************************************************************************************************************')
-            continue
+        #     # print('*************************************************************************************************************************')
+        #     print(f'{path_to_project}/DAGS/{project_number}/HDF5/{filepath}' + ' gave an error.')
+        #     # print('*************************************************************************************************************************')
+        #     continue
                     
-        plt.plot(step_num_list, max_bond_list)
+        plt.plot(at_list, max_bond_list)
         plt.ylabel('Maximum bond dimension')
         plt.xlabel('Iteration')
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/D_vs_iteration/{filepath}.png', bbox_inches = 'tight')
         plt.close()
         
-        plt.plot(step_num_list, ee_list)
-        print(f'{env}, {ee_list[-1]}')
-        plt.ylabel('Entanglement Entropy')
+        plt.plot(at_list, avg_bond_list)
+        plt.ylabel('Average bond dimension')
         plt.xlabel('Iteration')
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
-        plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/ee_vs_iteration/{filepath}.png', bbox_inches = 'tight')
+        plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Avg_D_vs_iteration/{filepath}.png', bbox_inches = 'tight')
         plt.close()
         
+        plt.plot(np.arange(len(avg_step_time)), avg_step_time)
+        plt.ylabel('Average step time')
+        plt.xlabel('Iteration')
+        plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
+        plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Avg_step_time_vs_iteration/{filepath}.png', bbox_inches = 'tight')
+        plt.close()
+        
+        particle_number_density = []
+        particle_number_density_sparse = []
+        for t in range(len(at_list)):
+            particle_number_density.append(0.5 + (0.5/N)*sum([z_list[idx][t]*(-1)**(idx) for idx in range(N)]))
+            if N <= 8:
+                particle_number_density_sparse.append(0.5 + (0.5/N)*sum([z_list_sparse[idx][t]*(-1)**(idx) for idx in range(N)]))
+        plt.plot(at_list, particle_number_density)
+        if N <= 8:
+            plt.plot(at_list, particle_number_density_sparse, '--', label = 'Sparse')
+        plt.ylabel('Particle Number Density')
+        plt.xlabel('Iteration')
+        plt.legend()
+        plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
+        plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Particle_Number_Density_vs_iteration/{filepath}.png', bbox_inches = 'tight')
+        plt.close()
+        
+        if max(N_list) <= 8:
+            plt.plot(at_list, ee_list)
+            plt.ylabel('Entanglement Entropy')
+            plt.xlabel('Iteration')
+            plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
+            plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/ee_vs_iteration/{filepath}.png', bbox_inches = 'tight')
+            plt.close()
+        
         for idx in range(N):
-            plt.plot(step_num_list, z_list[idx], label = f'Site {idx}')
+            plt.plot(at_list, z_list[idx], label = f'Site {idx}')
         plt.ylabel('<Z_i>')
         plt.xlabel('Iteration')
+        plt.legend()
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/z_vs_iteration/{filepath}.png', bbox_inches = 'tight')
         plt.close()
               
-        for i in range(len(step_num_list)):
+        for i in range(len(at_list)):
             
-            step, D, ee = step_num_list[i], max_bond_list[i], ee_list[i]
-            new_row = pd.DataFrame([[N, x, ma, l_0_init, l_0, tau, env, sig, aT, lam, aD_0, step, D, ee]], columns = df.columns)
+            if max(N_list) <= 8:
+                at, D, ee, pn = at_list[i], max_bond_list[i], ee_list[i], particle_number_density[i]
+                new_row = pd.DataFrame([[N, x, ma, l_0_init, l_0, tau, env, sig, aT, lam, aD_0, at, D, ee, pn, cutoff]], columns = df.columns)
+            else:
+                at, D, pn = at_list[i], max_bond_list[i], particle_number_density[i]
+                new_row = pd.DataFrame([[N, x, ma, l_0_init, l_0, tau, env, sig, aT, lam, aD_0, at, D, pn, cutoff]], columns = df.columns)
             df = pd.concat([df, new_row], ignore_index = True)
             
     df.to_csv('results.csv', index = False)
+                    
+def make_plots_from_df():
     
     df = pd.read_csv('results.csv')
     
-    # Make plots of energy vs time step size
+    # Make plots of energy vs time at size
     # for N in df.N.unique():
     #     for x in df.x.unique():
     #         for l_0 in df.l_0.unique():
@@ -214,6 +267,26 @@ def make_plots():
     #                 plt.xlabel('tau')
     #                 plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Energy_vs_tau/N_{N}_x_{x}_l_0_{l_0}_mg_{mg}.png', bbox_inches = 'tight')
     #                 plt.close()
-                                                            
-write_dag()
-# make_plots()
+    
+    
+    for N in df.N.unique():
+        for x in df.x.unique():
+            for l_0 in df.l_0.unique():
+                for ma in df.ma.unique():
+                    for aD_0 in df.aD_0.unique():
+                        for cutoff in df.cutoff.unique():
+                    
+                            df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff)]
+                        
+                            at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
+                                                                                        
+                            plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}')
+                            plt.title('PND vs at')
+                        
+                        plt.legend()
+                        plt.savefig(f'Plots/pnd_vs_at_aD_0_{aD_0}.png')
+                        plt.clf()
+                                                                          
+# write_dag()
+make_plots()
+make_plots_from_df()
