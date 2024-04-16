@@ -185,7 +185,7 @@ function run_ATDDMRG()
             # Refresh time variable and print statement
             tmp_time_measurement = (time() - t)/measure_every
             push!(avg_step_time, tmp_time_measurement)
-            println("Step $(step) finished, Time = $(time()-t), Average Step Time = $(tmp_time_measurement), Linkdims = $(linkdims(rho))\n")            
+            println("Step $(step) finished, Time = $(time()-t), Average Step Time = $(tmp_time_measurement), Linkdims = $(linkdims(rho)), applied field = $(applied field)\n")            
             flush(stdout)
             t = time()
 
