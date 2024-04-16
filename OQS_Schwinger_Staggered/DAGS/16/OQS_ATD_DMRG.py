@@ -151,7 +151,8 @@ def make_plots():
             if 'max_bond_list' not in file.keys():
                 continue
             max_bond_list = file['max_bond_list'][()]
-            at_list = file['step_num_list'][()]*tau
+            step_num_list = file['step_num_list'][()]
+            at_list = step_num_list*tau
             if max(N_list) <= 8:
                 ee_list = file['ee_list'][()]
             avg_bond_list = file['avg_bond_list'][()]
@@ -173,14 +174,14 @@ def make_plots():
             # print('*************************************************************************************************************************')
             continue
                     
-        plt.plot(at_list, max_bond_list)
+        plt.plot(step_num_list, max_bond_list)
         plt.ylabel('Maximum bond dimension')
         plt.xlabel('Iteration')
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/D_vs_iteration/{filepath}.png', bbox_inches = 'tight')
         plt.close()
         
-        plt.plot(at_list, avg_bond_list)
+        plt.plot(step_num_list, avg_bond_list)
         plt.ylabel('Average bond dimension')
         plt.xlabel('Iteration')
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
