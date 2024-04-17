@@ -12,30 +12,30 @@ file_to_run = 'OQS_ATD_DMRG.jl'
 name_of_dag = 'OQS_ATD_DMRG'
 
 N_list = [12]
-tau_list = [0.01, 0.001] # time step size
+tau_list = [0.01] # time step size
 # tau_previous_list = [0] + tau_list[:-1] # this can be left untouched for continuing from the previous time step size
 tau_previous_list = [0 for _ in range(len(tau_list))] # this can be left untouched for having every time step size independent
-max_steps_list = [600, 6000] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
-measure_every_list = [1, 10] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
+max_steps_list = [600] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
+measure_every_list = [1] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
 cutoff_list = [1e-6, 1e-9] # this is for compression after gate application
 tol_list = [1E-16] # tol for dmrg stopping condition
 x_list = [1] # [np.round(1/0.8**2, 6)]
-ma_list = [-0.1]
-l_0_list = [-1] 
+ma_list = [1]
+l_0_list = [0.01, 0.1, 0.5] 
 D_list = [1000] # anyway the dmrg will stop from tol
 lambd_list = [0.0]
 aD_0_list = [0, 0.5]
-aT_list = [5.0, 10.0]
+aT_list = [10.0]
 sigma_over_a_list = [3.0]
 env_corr_type_list = ["delta"]
 max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
-l_0_small_list = [-0.01]
-Omega_list = [0.01]
-omega_list = [1]
+l_0_small_list = [0.001, 0.01, 0.1]
+Omega_list = [0.001, 0.01]
+omega_list = [0.1]
 l_0_initial_state = 0.0
 dirac_vacuum_initial_state = "false"
 max_rho_D = 200
-project_number = 17 # <==================================== Important to change according to which project file ================================
+project_number = 18 # <==================================== Important to change according to which project file ================================
 
 def write_dag():
 
@@ -252,13 +252,16 @@ def make_plots():
 def make_plots_from_df():
     
     # for N in df.N.unique():
-    #         for x in df.x.unique():
-    #             for l_0 in df.l_0.unique():
-    #                 for ma in df.ma.unique():
-    #                     for aD_0 in df.aD_0.unique():
-    #                         for aT in df.aT.unique():
-    #                             for cutoff in df.cutoff.unique():
-    #                                 for tau in df.tau.unique():
+    #     for x in df.x.unique():
+    #         for l_0 in df.l_0.unique():
+    #             for ma in df.ma.unique():
+    #                 for aD_0 in df.aD_0.unique():
+    #                     for aT in df.aT.unique():
+    #                         for cutoff in df.cutoff.unique():
+    #                             for tau in df.tau.unique():
+    #                                 for l_0_small in df.l_0_small.unique():
+    #                                     for Omega in df.Omega.unique():
+    #                                         for omega in df.omega.unique():
     
     df = pd.read_csv('results.csv')
     
@@ -269,6 +272,9 @@ def make_plots_from_df():
     # Everything fixed except from tau in the legend
     def plot_tau():
         
+        if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/changing_tau'):
+            os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/changing_tau')
+        
         for N in df.N.unique():
             for x in df.x.unique():
                 for l_0 in df.l_0.unique():
@@ -276,30 +282,36 @@ def make_plots_from_df():
                         for aD_0 in df.aD_0.unique():
                             for aT in df.aT.unique():
                                 for cutoff in df.cutoff.unique():
-                                    for tau in df.tau.unique():
+                                    for l_0_small in df.l_0_small.unique():
+                                        for Omega in df.Omega.unique():
+                                            for omega in df.omega.unique():
+                                                for tau in df.tau.unique():
                         
-                                        df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff) & (df.aT == aT) & (df.tau == tau)]
-                                        # print(df_tmp)
-                                        at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
-                                        # print(pn_list)
-                                        # sorted_lists = sorted(zip(at_list, pn_list))
-                                        # at_list, pn_list = zip(*sorted_lists)
-                    
-                                        try:                                                 
-                                            plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, max = {max(pn_list)}, tau = {tau}')
-                                        except:
-                                            print(f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, tau = {tau} gave an error.')
-                                        plt.title('PND vs at')
+                                                    df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff) & (df.aT == aT) & (df.tau == tau) & (df.omega == omega) & (df.Omega == Omega) & (df.l_0_small == l_0_small)]
+                                                    # print(df_tmp)
+                                                    at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
+                                                    # print(pn_list)
+                                                    # sorted_lists = sorted(zip(at_list, pn_list))
+                                                    # at_list, pn_list = zip(*sorted_lists)
                                 
-                                    plt.legend(fontsize = 6)
-                                    plt.savefig(f'Plots/changing_tau/pnd_vs_at_N_{N}_x_{x}_l_0_{l_0}_ma_{ma}_aD_0_{aD_0}_aT_{aT}_cutoff_{cutoff}.png')
-                                    plt.clf()
-                                    plt.close()
+                                                    try:                                                 
+                                                        plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, max = {max(pn_list)}, tau = {tau}, l_0_small = {l_0_small}, om = {omega}, Om = {Omega}')
+                                                    except:
+                                                        print(f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, tau = {tau}, l0s = {l_0_small}, om = {omega}, Om = {Omega} gave an error.')
+                                                    plt.title('PND vs at')
+                                            
+                                                plt.legend(fontsize = 6)
+                                                plt.savefig(f'Plots/changing_tau/pnd_vs_at_N_{N}_x_{x}_l_0_{l_0}_ma_{ma}_aD_0_{aD_0}_aT_{aT}_cutoff_{cutoff}_l0s_{l_0_small}_om_{omega}_Omega_{Omega}.png')
+                                                plt.clf()
+                                                plt.close()
                         
-    # plot_tau()
+    plot_tau()
     
     # Everything fixed except from cutoff in the legend
     def plot_cutoff():
+        
+        if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/changing_cutoff'):
+            os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/changing_cutoff')
         
         for N in df.N.unique():
             for x in df.x.unique():
@@ -308,25 +320,28 @@ def make_plots_from_df():
                         for aD_0 in df.aD_0.unique():
                             for aT in df.aT.unique():
                                 for tau in df.tau.unique():
-                                    for cutoff in df.cutoff.unique():
+                                    for l_0_small in df.l_0_small.unique():
+                                        for Omega in df.Omega.unique():
+                                            for omega in df.omega.unique():
+                                                for cutoff in df.cutoff.unique():
                         
-                                        df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff) & (df.aT == aT) & (df.tau == tau)]
-                                        # print(df_tmp)
-                                        at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
-                                        # print(pn_list)
-                                        # sorted_lists = sorted(zip(at_list, pn_list))
-                                        # at_list, pn_list = zip(*sorted_lists)
-                    
-                                        try:                                                 
-                                            plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, max = {max(pn_list)}, tau = {tau}')
-                                        except:
-                                            print(f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, tau = {tau} gave an error.')
-                                        plt.title('PND vs at')
+                                                    df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff) & (df.aT == aT) & (df.tau == tau) & (df.omega == omega) & (df.Omega == Omega) & (df.l_0_small == l_0_small)]
+                                                    # print(df_tmp)
+                                                    at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
+                                                    # print(pn_list)
+                                                    # sorted_lists = sorted(zip(at_list, pn_list))
+                                                    # at_list, pn_list = zip(*sorted_lists)
                                 
-                                    plt.legend(fontsize = 6)
-                                    plt.savefig(f'Plots/changing_cutoff/pnd_vs_at_N_{N}_x_{x}_l_0_{l_0}_ma_{ma}_aD_0_{aD_0}_aT_{aT}_tau_{tau}.png')
-                                    plt.clf()
-                                    plt.close()
+                                                    try:                                                 
+                                                        plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, max = {max(pn_list)}, tau = {tau}, l0s = {l_0_small}, om = {omega}, Om = {Omega}')
+                                                    except:
+                                                        print(f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, tau = {tau}, l0s = {l_0_small}, om = {omega}, Om = {Omega} gave an error.')
+                                                    plt.title('PND vs at')
+                                            
+                                                plt.legend(fontsize = 6)
+                                                plt.savefig(f'Plots/changing_cutoff/pnd_vs_at_N_{N}_x_{x}_l_0_{l_0}_ma_{ma}_aD_0_{aD_0}_aT_{aT}_tau_{tau}_l0s_{l_0_small}_om_{omega}_Omega_{Omega}.png')
+                                                plt.clf()
+                                                plt.close()
                         
     plot_cutoff()
                                                                         

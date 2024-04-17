@@ -68,3 +68,11 @@ N = 20 pulse field different cutoff
 17 
 
 N = 12 to compare with static field for this lower N which should give less issues and also testing two different temperatures
+
+18 
+
+Trying out different parameters on the pulse field shape
+
+19
+
+Same as 18 but this time the parameters are set such that gamma > pi/2 from slide 75. Here gamma = m*omega/qE = ma * omega(*a) * x / l_0
