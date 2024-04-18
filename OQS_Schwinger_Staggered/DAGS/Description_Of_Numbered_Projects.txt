@@ -27,3 +27,7 @@ This is to comparing to pulse field project 14 in branch time_varying_l0
 I have to go a bit smaller than N = 20 which is project 15. I will go down to N = 12 first and have a project in the time_varying_l0
 as well to be able to compare. What we want to compare is open vs closed and time varying vs static applied field. Further I should
 always have a couple of cutoffs to be sure of convergence.
+
+20 
+
+Same as 19 pulse project to compare
