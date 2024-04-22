@@ -31,3 +31,16 @@ always have a couple of cutoffs to be sure of convergence.
 20 
 
 Same as 19 pulse project to compare
+
+21 
+
+New version of pipeline where pulse and static are submitted in the same branch by the same file but 1 dag for each one
+
+22
+
+Now that the new pipeline can generate states without error we can proceed with exploring for N = 12 different values of omega, Omega and l0s
+and compare them with the static field for different l_0 values.
+
+23 
+
+Changed pipeline into the pulse including three types sauter, gaussian, oscillating and this is a test with small values for the pipeline

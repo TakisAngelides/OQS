@@ -9,15 +9,14 @@ transfer_input_files = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Schwinger_Stag
 should_transfer_files = IF_NEEDED
 
 # if no units are specified here, MB are considered
-# mem = 10*(4*(2*$(N)*$(D)*$(D)*16*2/1e6)+1000)
 
-request_memory = 32G
+request_memory = $(mem)G
 
-request_cpus = 4
+request_cpus = $(cpu)
 
 +RequestRuntime = 6.99*24*3600
 
-# max_retries = 5
+max_retries = 0
 
 error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_x_$(x)_l_0_$(l_0)_ma_$(ma)_max_steps_$(max_steps)_D_$(D)_lam_$(lambda)_aD0_$(aD_0)_aT_$(aT)_sig_$(sigma_over_a)_$(env_corr_type)_swps_$(max_sweeps)_spars_$(sparse_evol)_cutoff_$(cutoff).error
 
