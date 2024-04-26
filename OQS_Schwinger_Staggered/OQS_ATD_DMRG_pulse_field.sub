@@ -12,9 +12,11 @@ should_transfer_files = IF_NEEDED
 
 request_memory = $(mem)G
 
+# request_memory = ifthenelse(MemoryUsage =!= undefined, MAX({MemoryUsage * 3/2, $(mem)G}), $(mem)G)
+
 request_cpus = $(cpu)
 
-+RequestRuntime = 6.99*24*3600
++RequestRuntime = $(days)*24*3600
 
 max_retries = 0
 

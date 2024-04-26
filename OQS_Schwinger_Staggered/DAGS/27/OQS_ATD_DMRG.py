@@ -10,32 +10,32 @@ path_to_project = f'{path_to_repo}/OQS_Schwinger_Staggered'
 file_to_run = 'OQS_ATD_DMRG.jl'
 name_of_dag = 'OQS_ATD_DMRG'
 
-N_list = [6]
+N_list = [12]
 tau_list = [0.01] # time step size
 # tau_previous_list = [0] + tau_list[:-1] # this can be left untouched for continuing from the previous time step size
 tau_previous_list = [0 for _ in range(len(tau_list))] # this can be left untouched for having every time step size independent
-max_steps_list = [6] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
-measure_every_list = [1] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
-cutoff_list = [1e-6] # this is for compression after gate application
+max_steps_list = [600] # how many ATDDMRG time steps to do, this needs to be the same size as the tau list
+measure_every_list = [10] # how often to measure observables and store the density matrix, this needs to be the same size as the max_steps_list
+cutoff_list = [1e-9, 1e-11] # this is for compression after gate application
 tol_list = [1E-16] # tol for dmrg stopping condition
-x_list = [1] # [np.round(1/0.8**2, 6)]
+x_list = [4] # [np.round(1/0.8**2, 6)]
 ma_list = [1]
-l_0_list = [1] 
+l_0_list = [0.1] 
 D_list = [1000] # anyway the dmrg will stop from tol
 lambd_list = [0.0]
-aD_0_list = [0.2]
+aD_0_list = [0]
 aT_list = [10.0]
 sigma_over_a_list = [3.0]
 env_corr_type_list = ["delta"]
 max_sweeps_list = [1000] # this is for the dmrg but it will stop from tol
-l_0_small_list = [0.001]
-type_list = ['sauter', 'gaussian', 'oscillating']
-omega_list = [0.001]
+l_0_small_list = [0.01]
+type_list = ['sauter']
+omega_list = [0.4]
 l_0_initial_state = 0.0
 dirac_vacuum_initial_state = "false"
 max_rho_D = 200
-mem = 8
-cpu = 4
+cpu = 2
+days = 1
 project_number = os.getcwd().strip().split('/')[-1]
 
 def write_dag_static_field():
@@ -83,6 +83,8 @@ def write_dag_static_field():
                                                             sparse_evol = "true" if (max(N_list) < 8) else "false"
                                                             for ma in ma_list:
                                                                 
+                                                                mem = 4
+                                                   
                                                                 measure_every = measure_every_list[tau_idx]
                                                                 
                                                                 if tau_idx == 0:
@@ -103,7 +105,7 @@ def write_dag_static_field():
                                                                 
                                                                 job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}'
                                                                 f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
-                                                                f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}" dirac_vacuum_initial_state="{dirac_vacuum_initial_state}" max_rho_D="{max_rho_D}" cpu="{cpu}" mem="{mem}"\n')
+                                                                f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}" dirac_vacuum_initial_state="{dirac_vacuum_initial_state}" max_rho_D="{max_rho_D}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
                                                                 f.write('RETRY ' + job_name + ' 3\n')
                                                                 counter += 1
                                                                 
@@ -161,6 +163,8 @@ def write_dag_pulse_field():
                                                                 for l_0_small in l_0_small_list:
                                                                     for omega in omega_list:
                                                                         for type in type_list:
+                                                                            
+                                                                            mem = 4
                                                                 
                                                                             max_steps = max_steps_list[tau_idx]
                                                                             measure_every = measure_every_list[tau_idx]
@@ -185,7 +189,7 @@ def write_dag_pulse_field():
                                                                             
                                                                             job_name = f'N_{N}_tau_{tau_text}_x_{x_text}_l0_{l_0_text}_ma_{ma_text}_env_{env_corr_type}_sig_{sigma_over_a_text}_aT_{aT_text}_lam_{lambd_text}_aD0_{aD_0_text}_l0init_{l_0_initial_state_text}_cutoff_{cutoff}_l0s_{l_0_small_text}_{type}_om_{omega_text}'
                                                                             f.write(f'JOB ' + job_name + f' {path_to_project}/{sub_file_name}\n')
-                                                                            f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}" dirac_vacuum_initial_state="{dirac_vacuum_initial_state}" max_rho_D="{max_rho_D}" l_0_small="{l_0_small}" type="{type}" omega="{omega}"\n')
+                                                                            f.write(f'VARS ' + job_name + f' N="{N}" tau="{tau}" cutoff="{cutoff}" tol="{tol}" x="{x}" l_0="{l_0}" ma="{ma}" max_steps="{max_steps}" project_number="{project_number}" h5_path="{h5_path}" measure_every="{measure_every}" h5_previous_path="{h5_previous_path}" D="{D}" lambda="{lambd}" aD_0="{aD_0}" aT="{aT}" sigma_over_a="{sigma_over_a}" env_corr_type="{env_corr_type}" max_sweeps="{max_sweeps}" sparse_evol="{sparse_evol}" path_to_project="{path_to_project}" file_to_run="{file_to_run}" l_0_initial_state="{l_0_initial_state}" dirac_vacuum_initial_state="{dirac_vacuum_initial_state}" max_rho_D="{max_rho_D}" l_0_small="{l_0_small}" type="{type}" omega="{omega}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
                                                                             f.write('RETRY ' + job_name + ' 3\n')
                                                                             counter += 1
                                                                             
@@ -297,7 +301,7 @@ def make_plots_static_field():
             plt.plot(at_list, particle_number_density_sparse, '--', label = 'Sparse')
         plt.ylabel('Particle Number Density')
         plt.xlabel('Iteration')
-        plt.legend()
+        # plt.legend()
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/Particle_Number_Density_vs_iteration/{filepath}.png', bbox_inches = 'tight')
         plt.close()
@@ -314,7 +318,7 @@ def make_plots_static_field():
             plt.plot(at_list, z_list[idx], label = f'Site {idx}')
         plt.ylabel('<Z_i>')
         plt.xlabel('Iteration')
-        plt.legend()
+        # plt.legend()
         plt.title(f'N = {N}, tau = {tau}, x = {x}, l_0 = {l_0}, ma = {ma}, env = {env}, sig = {sig}, aT = {aT}, lam = {lam}, aD_0 = {aD_0}')
         plt.savefig(f'{path_to_project}/DAGS/{project_number}/Plots/z_vs_iteration/{filepath}.png', bbox_inches = 'tight')
         plt.close()
@@ -329,11 +333,11 @@ def make_plots_static_field():
                 new_row = pd.DataFrame([[N, x, ma, l_0_init, l_0, tau, env, sig, aT, lam, aD_0, at, D, pn, cutoff]], columns = df.columns)
             df = pd.concat([df, new_row], ignore_index = True)
             
-    df.to_csv('results.csv', index = False)
+    df.to_csv('results_static.csv', index = False)
 
 def make_plots_from_df_static_field():
     
-    df = pd.read_csv('results.csv')
+    df = pd.read_csv('results_static.csv')
     
     # Make plots of energy vs time at size
     # for N in df.N.unique():
@@ -382,7 +386,7 @@ def make_plots_from_df_static_field():
                                 plt.title('PND vs at')
                         
                         plt.legend(fontsize = 6)
-                        plt.savefig(f'Plots/pnd_vs_at_aD_0_{aD_0}_st.png')
+                        plt.savefig(f'Plots/pnd_vs_at_aD_0_{aD_0}_l_0_{l_0}_st.png')
                         plt.clf()
 
 def make_plots_pulse_field():
@@ -415,7 +419,7 @@ def make_plots_pulse_field():
             row = filepath[:-3].strip().split('_')
             if row[-2] != 'om':
                 continue
-            N, tau, x, l_0, ma, env, sig, aT, lam, aD_0, l_0_init, cutoff, l_0_small, type, omega = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19], row[21], row[23], row[25], row[27], row[29]
+            N, tau, x, l_0, ma, env, sig, aT, lam, aD_0, l_0_init, cutoff, l_0_small, type, omega = row[1], row[3], row[5], row[7], row[9], row[11], row[13], row[15], row[17], row[19], row[21], row[23], row[25], row[26], row[28]
             N = int(N)
             tau = float(tau)
             x = float(x)
@@ -516,7 +520,7 @@ def make_plots_pulse_field():
                 new_row = pd.DataFrame([[N, x, ma, l_0_init, l_0, tau, env, sig, aT, lam, aD_0, at, D, pn, l_0_small, omega, type, cutoff]], columns = df.columns)
             df = pd.concat([df, new_row], ignore_index = True)
             
-    df.to_csv('results.csv', index = False)
+    df.to_csv('results_pulse.csv', index = False)
                     
 def make_plots_from_df_pulse_field():
     
@@ -532,7 +536,7 @@ def make_plots_from_df_pulse_field():
     #                                     for type in df.type.unique():
     #                                         for omega in df.omega.unique():
     
-    df = pd.read_csv('results.csv')
+    df = pd.read_csv('results_pulse.csv')
     
     line_styles = ['-', '--', '-.', ':', '-', '--', '-.', ':', '--']
     colors = ['b', 'g', 'r', 'orange', 'black', 'cyan', 'purple', 'pink', 'blue']
@@ -574,7 +578,7 @@ def make_plots_from_df_pulse_field():
                                                 plt.clf()
                                                 plt.close()
                         
-    plot_tau()
+    # plot_tau()
     
     # Everything fixed except from cutoff in the legend
     def plot_cutoff():
@@ -612,12 +616,50 @@ def make_plots_from_df_pulse_field():
                                                 plt.clf()
                                                 plt.close()
                         
-    plot_cutoff()
+    # plot_cutoff()
                     
-                                                                          
-write_dag_static_field()
-write_dag_pulse_field()
+    def plot_type():
+        
+        if not os.path.exists(f'{path_to_project}/DAGS/{project_number}/Plots/changing_type'):
+            os.makedirs(f'{path_to_project}/DAGS/{project_number}/Plots/changing_type')
+            
+        for N in df.N.unique():
+            for x in df.x.unique():
+                for l_0 in df.l_0.unique():
+                    for ma in df.ma.unique():
+                        for aD_0 in df.aD_0.unique():
+                            for aT in df.aT.unique():
+                                for tau in df.tau.unique():
+                                    for l_0_small in df.l_0_small.unique():
+                                        for cutoff in df.cutoff.unique():
+                                            for omega in df.omega.unique():
+                                                for type_field in df.type.unique():
+                                                                    
+                                                    df_tmp = df[(df.N == N) & (df.x == x) & (df.l_0 == l_0) & (df.ma == ma) & (df.aD_0 == aD_0) & (df.cutoff == cutoff) & (df.aT == aT) & (df.tau == tau) & (df.omega == omega) & (df.type == type_field) & (df.l_0_small == l_0_small)]
+                                                    # print(df_tmp)
+                                                    at_list, pn_list = np.array(df_tmp['at']), np.array(df_tmp.pn)
+                                                    # print(pn_list)
+                                                    # sorted_lists = sorted(zip(at_list, pn_list))
+                                                    # at_list, pn_list = zip(*sorted_lists)
+                                
+                                                    try:                                              
+                                                        plt.plot(at_list, pn_list, label = f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, max = {max(pn_list)}, tau = {tau}, l0s = {l_0_small}, om = {omega}, type = {type_field}')
+                                                    except:
+                                                        print(f'N = {N}, aD_0 = {aD_0}, cutoff = {cutoff}, aT = {aT}, tau = {tau}, l0s = {l_0_small}, om = {omega}, type = {type_field} gave an error.')
+                                                    plt.title('PND vs at')
+                                            
+                                                plt.legend(fontsize = 6)
+                                                plt.savefig(f'Plots/changing_type/pnd_vs_at_N_{N}_x_{x}_l_0_{l_0}_ma_{ma}_aD_0_{aD_0}_aT_{aT}_tau_{tau}_l0s_{l_0_small}_om_{omega}.png')
+                                                plt.clf()
+                                                plt.close()              
+    
+    plot_type()
+                                                                     
+# write_dag_static_field()
+# write_dag_pulse_field()
+
 # make_plots_static_field()
 # make_plots_from_df_static_field()
+
 # make_plots_pulse_field()
 # make_plots_from_df_pulse_field()

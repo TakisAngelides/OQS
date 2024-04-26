@@ -44,3 +44,22 @@ and compare them with the static field for different l_0 values.
 23 
 
 Changed pipeline into the pulse including three types sauter, gaussian, oscillating and this is a test with small values for the pipeline
+
+24
+
+Now that the new pipeline is working we can compare the different applied field types.
+
+What we need is Es >> E1 >> E2 and m >> omega for all. We also need to be above the gamma critical for all which 
+in analytical form is m*omega/(q*E1). For Sauter pulse this is pi/2, for gaussian it is sqrt(abs(ln(E2/E1))) and for oscillating abs(ln(E2/E1)).
+
+25
+
+Same as 24 but quenching the Dirac vacuum.
+
+26 
+
+Same as 24 but opposite direction applied electric field
+
+27 
+
+Testing for N = 12 the effect of having a small enough field that SPND is below 0 for static but not for time varying.
