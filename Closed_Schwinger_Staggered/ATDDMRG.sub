@@ -1,0 +1,23 @@
+environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULIA_DEPOT_PATH'"
+
+executable = /lustre/fs24/group/cqta/tangelides/julia-1.8.5/bin/julia
+
+arguments = $(path_to_project)/$(file_to_run) $(N) $(tau) $(cutoff) $(tol) $(x) $(l_0) $(ma) $(max_steps) $(project_number) $(l_0_initial) $(h5_path) $(measure_every) $(h5_previous_path) $(lambda) $(D) $(max_sweeps) $(l_0_small) $(omega) $(type)
+
+transfer_input_files = $(path_to_project)/$(file_to_run)
+
+should_transfer_files = IF_NEEDED
+
+# request_memory = $(mem)
+
+# +RequestRuntime = 6.99*24*3600
+
+# max_retries = 5
+
+error = $(path_to_project)/DAGS/$(project_number)/Logs/Error/N_$(N)_tau_$(tau)_cut_$(cutoff)_tol_$(tol)_x_$(x)_l_0_$(l_0)_ma_$(ma)_stps_$(max_steps)_l0i_$(l_0_initial)_lmbd_$(lambda)_D_$(D)_swps_$(max_sweeps)_l0s_$(l_0_small)_om_$(omega)_$(type).error
+
+output = $(path_to_project)/DAGS/$(project_number)/Logs/Output/N_$(N)_tau_$(tau)_cut_$(cutoff)_tol_$(tol)_x_$(x)_l_0_$(l_0)_ma_$(ma)_stps_$(max_steps)_l0i_$(l_0_initial)_lmbd_$(lambda)_D_$(D)_swps_$(max_sweeps)_l0s_$(l_0_small)_om_$(omega)_$(type).out                    
+
+log = $(path_to_project)/DAGS/$(project_number)/Logs/Log/N_$(N)_tau_$(tau)_cut_$(cutoff)_tol_$(tol)_x_$(x)_l_0_$(l_0)_ma_$(ma)_stps_$(max_steps)_l0i_$(l_0_initial)_lmbd_$(lambda)_D_$(D)_swps_$(max_sweeps)_l0s_$(l_0_small)_om_$(omega)_$(type).log 
+
+queue

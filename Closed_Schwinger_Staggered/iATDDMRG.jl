@@ -33,6 +33,8 @@ function get_dmrg_results()
     write(file, "dmrg_energy", dmrg_energy)
     write(file, "dmrg_state", dmrg_state)
 
+    return dmrg_state
+
 end
 
 function run_iattDMRG()
@@ -267,7 +269,7 @@ end
 
 if get_dmrg
     println("DMRG starting now\n")
-    get_dmrg_results()
+    gs = get_dmrg_results()
     println("DMRG is finished, starting iattDMRG now\n")
     run_iattDMRG()
 else

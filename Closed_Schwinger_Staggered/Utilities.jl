@@ -6,7 +6,6 @@ function get_exp_Hz(sites, a, x, l_0, ma)
     This operator includes the ZZ long range interactions, the mass term and the single Z term from the electric field term
 
     """
-
     N = length(sites)
 
     opsum = OpSum()
@@ -318,6 +317,8 @@ end
 
 function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 0)
 
+    N = length(mps)
+
     for (idx_num, idx) in enumerate(1:2:N-1)
 
         gate = Ho_mpo_list[idx_num]
@@ -360,6 +361,8 @@ function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 0)
     After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
     To apply the first even gate which starts at the second site we need to have the first site in Left canonical form
     """
+
+    N = length(mps)
 
     # mps[1], mps[2] = ITensors.qr(mps[1]*mps[2], uniqueinds(mps[1], mps[2]); positive = true, tags = "Link,l=$(1)")
     mps[1], S, V = ITensors.svd(mps[1]*mps[2], uniqueinds(mps[1], mps[2]), lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)"; cutoff = cutoff)
@@ -419,7 +422,7 @@ function get_Z_site_operator(site)
 
     ampo::Sum{Scaled{ComplexF64, Prod{Op}}} = OpSum()
 
-    ampo += 2,"Sz",site
+    ampo += "Z",site
 
     return ampo
 
@@ -557,7 +560,7 @@ function get_charge_and_electric_field_configurations(psi, l_0)
 
     Z_configuration = get_Z_configuration(psi)
 
-    N = div(length(psi), 2)
+    N = length(psi)
 
     n_links = N - 1
 

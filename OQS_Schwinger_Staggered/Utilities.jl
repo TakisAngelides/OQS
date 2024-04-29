@@ -369,7 +369,7 @@ function get_charge_and_electric_field_configurations(psi, l_0)
 
     Z_configuration = get_Z_configuration(psi)
 
-    N = div(length(psi), 2)
+    N = length(psi)
 
     n_links = N - 1
 
@@ -1749,7 +1749,7 @@ function get_electric_field_from_zeroq_density_matrix(N, rho, l_0)
 
     res = []
     charge_config = get_charge_config_from_zeroq_density_matrix(N, rho)
-    for i in 1:N
+    for i in 1:N-1
         push!(res, l_0 + sum(charge_config[1:i]))
     end
 
