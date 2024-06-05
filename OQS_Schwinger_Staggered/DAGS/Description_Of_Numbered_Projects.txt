@@ -63,3 +63,7 @@ Same as 24 but opposite direction applied electric field
 27 
 
 Testing for N = 12 the effect of having a small enough field that SPND is below 0 for static but not for time varying.
+
+28
+
+Doing N = 20 with ma = 1 = e, aD = 0.01, E1 = 0.02, E2 = 0.01, aT = 10
