@@ -18,10 +18,10 @@ request_cpus = $(cpu)
 
 max_retries = 0
 
-error = $(path_to_inputs_h5)/Logs/Error/$(job_id).error
+error = $(path_to_project_number)/Logs/Error/$(job_id).error
 
-output = $(path_to_inputs_h5)/Logs/Output/$(job_id).out                    
+output = $(path_to_project_number)/Logs/Output/$(job_id).out                    
 
-log = $(path_to_inputs_h5)/Logs/Log/$(job_id).log 
+log = $(path_to_project_number)/Logs/Log/$(job_id).log 
 
 queue

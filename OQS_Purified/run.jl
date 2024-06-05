@@ -12,15 +12,18 @@ include("utilities.jl")
 
 # Input arguments for file and opening the results h5 file
 println("Now getting the input arguments for the file and opening the results h5 file ", now())
+flush(stdout)
 path_to_inputs_h5 = ARGS[1] # Where the h5 file containing the inputs is
 job_id = ARGS[2] # The job id to get the inputs within this h5 file for this specific job
 path_to_save_results_h5 = ARGS[3] # The path to the h5 file to save all results
 results_file = h5open(path_to_save_results_h5, "w")
 write(results_file, "path_to_inputs_h5", path_to_inputs_h5) # This can be used later to get the constants such as N etc
 println("Finished getting the input arguments for the file and opening the results h5 file ", now())
+flush(stdout)
 
 # Build a dictionary of the inputs
 println("Now building a dictionary of the inputs", now())
+flush(stdout)
 inputs_file = h5open(path_to_inputs_h5, "r")
 group = inputs_file["$(job_id)"]
 group_attributes = attributes(group)
@@ -30,10 +33,13 @@ for key in keys(group_attributes)
 end
 close(inputs_file)
 println("The inputs are ", inputs)
+flush(stdout)
 println("Finished building a dictionary of the inputs ", now())
+flush(stdout)
 
 # Prepare the initial state
 println("Now getting the initial state ", now())
+flush(stdout)
 function get_initial_state(which_initial_state, conserve_qns, N, results_file, inputs)
 
     sites_initial_state = siteinds("S=1/2", N, conserve_qns = conserve_qns)
@@ -88,13 +94,15 @@ function get_initial_state(which_initial_state, conserve_qns, N, results_file, i
 
 end
 which_initial_state = inputs["wis"]
-conserve_qns = inputs["cqns"]
+conserve_qns = parse(Bool, inputs["cqns"])
 N = inputs["N"]
 mps = get_initial_state(which_initial_state, conserve_qns, N, results_file, inputs)
 println("Finished getting the initial state ", now())
+flush(stdout)
 
 # Get the taylor, odd and even gates without the l0 terms
 println("Now getting the odd, even and taylor gates without the l0 terms ", now())
+flush(stdout)
 x = inputs["x"]
 ma = inputs["ma"]
 lambda = inputs["lambda"]
@@ -112,9 +120,11 @@ nn_odd_without_l0_terms, nn_even_without_l0_terms, taylor = get_odd_even_taylor_
 odd_without_l0_terms = get_odd(sites, tau/2, nn_odd_without_l0_terms)
 even_without_l0_terms = get_even(sites, tau, nn_even_without_l0_terms)
 println("Finished getting the odd, even and taylor gates without the l0 terms ", now())
+flush(stdout)
 
 # Get the odd and even gates with just the l0 terms
 println("Now getting the odd, even and taylor gates with just the l0 terms ", now())
+flush(stdout)
 which_applied_field = inputs["waf"]
 t_over_a = 0 # starting the time variable
 l_0 = get_applied_field(which_applied_field, inputs, t_over_a)
@@ -123,14 +133,18 @@ nn_odd_just_l0_terms, nn_even_just_l0_terms, _ = get_odd_even_taylor_groups(opsu
 odd_just_l0_terms = get_odd(sites, tau/2, nn_odd_just_l0_terms)
 even_just_l0_terms = get_even(sites, tau, nn_even_just_l0_terms)
 println("Finished getting the odd, even and taylor gates with just the l0 terms ", now())
+flush(stdout)
 
 # Gather the two odd and even gates
 println("Now putting all the even and odd together ", now())
+flush(stdout)
 odd, even = vcat(odd_without_l0_terms, odd_just_l0_terms), vcat(even_without_l0_terms, even_just_l0_terms)
 println("Finished putting all the even and odd together ", now())
+flush(stdout)
 
 # Get the MPO for the Taylor expansion
 println("Now getting the MPO for the taylor expansion ", now())
+flush(stdout)
 taylor_expansion_order = inputs["teo"]
 taylor_expansion_cutoff_1 = inputs["tec_1"]
 taylor_mpo_tmp = 0.5*tau*MPO(taylor, sites)
@@ -141,21 +155,25 @@ end
 taylor_expansion_cutoff_2 = inputs["tec_2"]
 taylor_mpo = get_mpo_taylor_expansion(taylor_mpo_tmp, taylor_expansion_order, taylor_expansion_cutoff_2, sites)
 println("The taylor_mpo with taylor order $(taylor_expansion_order) and cutoffs $(taylor_expansion_cutoff_1), $(taylor_expansion_cutoff_2) has bond dimensions ", linkdims(taylor_mpo))
+flush(stdout)
 println("Finished getting the MPO for the taylor expansion ", now())
+flush(stdout)
 
 # Starting the lists of the observables we want to keep track of
 println("Now getting the lists for the tracked observables ", now())
+flush(stdout)
 number_of_time_steps = inputs["nots"]
 z_configs = [[] for _ in 0:number_of_time_steps]
 z_configs[1] = measure_z_config(mps)
 println("Finished getting the lists for the tracked observables ", now())
+flush(stdout)
 
 # Perform the time evolution
 function evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms, results_file, inputs, z_configs, mps)
 
     cutoff = inputs["cutoff"]
     maxdim = inputs["md"]
-    time_varying_applied_field_flag = inputs["tvaff"]
+    time_varying_applied_field_flag = parse(Bool, inputs["tvaff"])
 
     if time_varying_applied_field_flag
 
@@ -187,6 +205,7 @@ function evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms
             z_configs[step+1] = measure_z_config(mps)
 
             println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps))")
+            flush(stdout)
 
         end
 
@@ -209,6 +228,7 @@ function evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms
             z_configs[step+1] = measure_z_config(mps)
 
             println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps))")
+            flush(stdout)
 
         end
 
@@ -220,3 +240,4 @@ evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms, results
 close(results_file)
 
 println("Finished ", now())
+flush(stdout)

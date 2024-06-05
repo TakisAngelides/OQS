@@ -93,7 +93,7 @@ def write_dag():
     # Static applied field case and delta correlator
     lambd = 0
     conserve_qns = "true"
-    number_of_time_steps_list = [3] # needs same length as tau list
+    number_of_time_steps_list = [20, 200] # needs same length as tau list
     taylor_expansion_cutoff_1 = 1e-15
     taylor_expansion_cutoff_2 = 1e-12
     maxdim = 300
@@ -101,22 +101,22 @@ def write_dag():
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
     which_initial_state = "dirac_vacuum_with_string" # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
-    
-    for N in [4]:
+        
+    for N in [4, 6]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2, N//2 + 1] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
-        for x in [1]:
-            for ma in [1]:
+        for x in [10]:
+            for ma in [0.1]:
                 for aD in [1]:
                     for aT in [10]:
-                        for tau_idx, tau in enumerate([0.001]):
+                        for tau_idx, tau in enumerate([0.01, 0.001]):
                             number_of_time_steps = number_of_time_steps_list[tau_idx]
-                            for cutoff in [1e-9]:
+                            for cutoff in [1e-9, 1e-10, 1e-11]:
                                 for taylor_expansion_order in [1]:
-                                    for l_0_1 in [0]: # this is the constant part of the applied field
+                                    for l_0_1 in [0.7]: # this is the constant part of the applied field
                                         
                                         # Memory, CPU and maximum number of days to run
-                                        mem, cpu, days = 4, 1, 1
+                                        mem, cpu, days = 8, 8, 1
                                         
                                         # Job id for the dag job names and path to h5 for results
                                         job_id = counter_of_jobs
