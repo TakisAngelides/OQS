@@ -234,90 +234,70 @@ function get_which_canonical_form(mps)
 
 end
 
-function apply_odd!(Ho_mpo_list, mpo; cutoff = 0, max_rho_D = 500)
+function apply_odd!(odd, mps, cutoff, maxdim)
 
-    N = length(mpo)
+    l = length(mps)
 
-    for (idx, gate) in enumerate(Ho_mpo_list)
+    for (n_idx, n) in enumerate(1:4:(l-3)) # n is the left most site the gate acts on, the gates are always 4 site in span
 
-        # idx will be 1, 2, 3, ... and we set it below to the left index of the gate to be applied 1, 3, 5, ... 
-        idx = 2*idx-1
+        gate = odd[n_idx]
 
-        # println("Odd gate left index is $(idx) and the MPO canonical form is ", get_MPO_canonical_form(mpo))
+        t = noprime(gate*prod(mps[n:n+3]))
 
-        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*hermitian_conjugate_mpo(gate), 3 => 1)
+        # Separate the t tensor into individual MPS site tensors
+        for idx in n:n+2
+            t_indices = inds(t)
+            U_indices = filter(i -> hastags(i, "Site,n=$(idx)") || hastags(i, "Link,l=$(idx-1)"), t_indices)
+            U, S, V = ITensors.svd(t, U_indices; cutoff = cutoff, maxdim = maxdim, lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)")
+            t = S*V
+            mps[idx] = U
+        end
+        mps[n+3] = t
 
-        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
-        
-        mpo[idx] = U
-
-        # S = S/norm(S)
-        
-        mpo[idx+1] = S*V
-
-        # Extra SVD for ATTDMRG compared to TEBD
-        if idx != N-1
-        
-            idx += 1
-        
-            tmp = mpo[idx]*mpo[idx+1]
-        
-            U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
-        
-            mpo[idx] = U
-
-            # S = S/norm(S)
-        
-            mpo[idx+1] = S*V
-        
+        if n+4 <= l
+            # Extra SVD as required by ATD DMRG
+            t = mps[n+3]*mps[n+4]
+            mps[n+3], S, V = ITensors.svd(t, uniqueinds(t, mps[n+4]); cutoff = cutoff, maxdim = maxdim, lefttags = "Link,l=$(n+3)", righttags = "Link,l=$(n+3)")
+            mps[n+4] = S*V
         end
 
     end
 
 end
 
-function apply_even!(He_mpo_list, mpo; cutoff = 0, max_rho_D = 500)
+function apply_even!(even, mps, cutoff, maxdim)
 
-    """
-    After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
-    To apply the first even gate which starts at the second site we need to have the first site in Left canonical form
-    """
-
-    # mps[1], mps[2] = ITensors.qr(mps[1]*mps[2], uniqueinds(mps[1], mps[2]); positive = true, tags = "Link,l=$(1)")
-    mpo[1], S, V = ITensors.svd(mpo[1]*mpo[2], commoninds(mpo[1], mpo[1]*mpo[2])..., lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)")
-    # S = S/norm(S)
-    mpo[2] = S*V
-
-    for (idx, gate) in enumerate(He_mpo_list)
-
-        idx = 2*idx
-
-        # println("Even gate left index is $(idx) and the MPO canonical form is ", get_MPO_canonical_form(mpo))
-
-        tmp = replaceprime(prime(gate'*mpo[idx]*mpo[idx+1]; :tags => "Site")*hermitian_conjugate_mpo(gate), 3 => 1)
-        
-        U, S, V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
-        
-        mpo[idx] = U
-
-        # S = S/norm(S)
-        
-        mpo[idx+1] = S*V
-
-        # Extra SVD for ATTDMRG compared to TEBD
-        
-        idx += 1
+    l = length(mps)
     
-        tmp = mpo[idx]*mpo[idx+1]
-    
-        U,S,V = ITensors.svd(tmp, commoninds(tmp, mpo[idx])..., lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = max_rho_D)
-    
-        mpo[idx] = U
+    t = mps[1]*mps[2]
+    mps[1], mps[2] = ITensors.qr(t, uniqueinds(t, mps[2]); tags = "Link,l=$(1)")
 
-        # S = S/norm(S)
-    
-        mpo[idx+1] = S*V
-    
+    t = mps[2]*mps[3]
+    mps[2], mps[3] = ITensors.qr(t, uniqueinds(t, mps[3]); tags = "Link,l=$(2)")
+
+    for (n_idx, n) in enumerate(3:4:(l-3)) # n is the left most site the gate acts on, the gates are always 4 site in span
+
+        gate = even[n_idx]
+
+        t = noprime(gate*prod(mps[n:n+3]))
+
+        # Separate the t tensor into individual MPS site tensors
+        for idx in n:n+2
+            t_indices = inds(t)
+            U_indices = filter(i -> hastags(i, "Site,n=$(idx)") || hastags(i, "Link,l=$(idx-1)"), t_indices)
+            U, S, V = ITensors.svd(t, U_indices; cutoff = cutoff, maxdim = maxdim, lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)")
+            t = S*V
+            mps[idx] = U
+        end
+        mps[n+3] = t
+
+        if n_idx != length(3:4:(l-3))
+            # Extra SVD as required by ATD DMRG
+            t = mps[n+3]*mps[n+4]
+            mps[n+3], S, V = ITensors.svd(t, uniqueinds(t, mps[n+4]); cutoff = cutoff, maxdim = maxdim, lefttags = "Link,l=$(n+3)", righttags = "Link,l=$(n+3)")
+            mps[n+4] = S*V
+        end
+
     end
 
 end
@@ -618,8 +598,8 @@ function get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
 
     # Kinetic term
     for n=1:N-1
-        H += (1/4)*get_op(["X", "X"], [n, n+1], N)
-        H += (1/4)*get_op(["Y", "Y"], [n, n+1], N)
+        H += 0.5*get_op(["S-", "S+"], [n, n+1], N)
+        H += 0.5*get_op(["S+", "S-"], [n, n+1], N)
     end
 
     # Long range ZZ interaction term
@@ -645,18 +625,19 @@ function get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
     return H
 end
 
-function environment_correlator(type, n, m, aD_0, sigma_over_a)
+function environment_correlator(type, n, m, aD, inputs)
 
     if type == "constant"
-        return aD_0
+        return aD
     elseif type == "delta"
         if n == m
-            return aD_0
+            return aD
         else
             return 0.0
         end
     else # gaussian case
-        return exp(-0.5*(1/sigma_over_a)^2*(n-m)^2)
+        sigma_over_a = inputs["sigma_over_a"]
+        return aD*exp(-0.5*(1/sigma_over_a)^2*(n-m)^2)
     end
 
 end
@@ -695,7 +676,7 @@ end
 
 function get_op(ops, positions, N; reverse_flag = true)
 
-    op_dict = Dict("X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]))
+    op_dict = Dict("X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]), "S+" => sparse([0 1; 0 0]), "S-" => sparse([0 0; 1 0]))
     zipped = TupleTools.sort(Tuple(zip(1:length(ops), positions, ops)); by = x -> x[2])
     old_positions = [element[2] for element in zipped] 
     old_ops = [element[3] for element in zipped]
@@ -966,13 +947,19 @@ end
 
 function get_LdagL(n, m, aT, sites)
 
+    """
+    Gives the operator L_n_dagger * L_m
+    """
+
     N = length(sites)
     
     opsum = OpSum()
 
     opsum += 0.25*(-1)^(n+m),"Z",n,"Z",m
 
-    opsum += 0.5*(-1)^(n+m),"Z",n
+    opsum += 0.25*(-1)^(n+m),"Z",n
+
+    opsum += 0.25*(-1)^(n+m),"Z",m
 
     opsum += 0.25*(-1)^(n+m),"Id",1
 
@@ -994,6 +981,30 @@ function get_LdagL(n, m, aT, sites)
     if (m != N)
         opsum += (-(-1)^(n + m)/(16*aT)),"Z",n,"S-",m,"S+",m+1
         opsum += ((-1)^(n + m)/(16*aT)),"Z",n,"S+",m,"S-",m+1
+    end
+
+    if (n + m) % 2 != 0 # this is the case of the first part of the dissipator with aL_2m-1 * aL_2n_dagger where the two act on left and right (top and bottom) respectively
+
+        if (n != 1)
+            opsum += (-(-1)^(n + m)/(16*aT)),"S-",n-1,"S+",n
+            opsum += ((-1)^(n + m)/(16*aT)),"S+",n-1,"S-",n
+        end
+
+        if (n != N)
+            opsum += ((-1)^(n + m)/(16*aT)),"S-",n,"S+",n+1
+            opsum += (-(-1)^(n + m)/(16*aT)),"S+",n,"S-",n+1
+        end
+    
+        if (m != 1)
+            opsum += ((-1)^(n + m)/(16*aT)),"S-",m-1,"S+",m
+            opsum += (-(-1)^(n + m)/(16*aT)),"S+",m-1,"S-",m
+        end
+        
+        if (m != N)
+            opsum += (-(-1)^(n + m)/(16*aT)),"S-",m,"S+",m+1
+            opsum += ((-1)^(n + m)/(16*aT)),"S+",m,"S-",m+1
+        end
+
     end
 
     if (n != 1) && (m != 1)
@@ -1046,13 +1057,13 @@ function get_Lindblad_dissipative_part(aD_0, sigma_over_a, env_corr_type, aT, si
 
     N = length(sites)
 
-    mpo = aD_0 * environment_correlator(env_corr_type, 1, 1, aD_0, sigma_over_a) * get_LdagL(1, 1, aT, sites)
+    mpo = environment_correlator(env_corr_type, 1, 1, aD_0, sigma_over_a) * get_LdagL(1, 1, aT, sites)
 
     for n=1:N
         for m=1:N
 
             if !((n == 1) && (m == 1))
-                mpo += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * get_LdagL(n, m, aT, sites)
+                mpo += environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * get_LdagL(n, m, aT, sites)
             end
 
         end
@@ -1100,7 +1111,7 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
     opsum += 1im*(0.5*ma*(-1)^(N-1)),"Z",N+N
     opsum += 1im*((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1+N
 
-    h1 = MPO(opsum, sites; cutoff = 0)
+    h1 = MPO(opsum, sites)
 
     if aD_0 != 0
 
@@ -1133,7 +1144,7 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
                     opsum += (-1im*(-1)^n/(16*aT)),"Y",n,"X",n+N+1
                 end 
                 h3 = hermitian_conjugate_mpo(MPO(aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a)*opsum, sites; cutoff = 0))
-                h1 = add(h1, apply(h2, h3, cutoff = 0); cutoff = 0)
+                h1 = add(h1, apply(h2, h3; cutoff = 0); alg = "directsum")
                 
                 # The Ldag_n_L_m_left
                 opsum = OpSum()
@@ -1225,7 +1236,7 @@ function get_double_size_Lindblad_operator(N, sites, x, ma, l_0, lambda, aD_0, s
                     opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (-(-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"X",m+N,"Y",m+1+N
                     opsum += -0.5 * aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((-1)^(n + m)/(256*aT^2)),"Y",n+N,"X",n+1+N,"Y",m+N,"X",m+1+N
                 end
-                h1 = add(h1, MPO(opsum, sites; cutoff = 0); cutoff = 0)
+                h1 = add(h1, MPO(opsum, sites; cutoff = 0); alg = "directsum")
 
             end
         end
@@ -1249,13 +1260,13 @@ function get_Lindblad_jump_operator_sparse_matrix(N, m, aT)
     res += 0.5*((-1)^m)*eye(2^N)
     
     if m != 1
-        res += (1im*(-1)^m/(16*aT))*get_op(["X", "Y"], [m-1, m], N)
-        res += (-1im*(-1)^m/(16*aT))*get_op(["Y", "X"], [m-1, m], N)
+        res += (-(-1)^m/(8*aT))*get_op(["S+", "S-"], [m-1, m], N)
+        res += ((-1)^m/(8*aT))*get_op(["S-", "S+"], [m-1, m], N)
     end
     
     if m != N
-        res += (-1im*(-1)^m/(16*aT))*get_op(["X", "Y"], [m, m+1], N)
-        res += (1im*(-1)^m/(16*aT))*get_op(["Y", "X"], [m, m+1], N)
+        res += ((-1)^m/(8*aT))*get_op(["S+", "S-"], [m, m+1], N)
+        res += (-(-1)^m/(8*aT))*get_op(["S-", "S+"], [m, m+1], N)
     end
 
     return res
@@ -1280,7 +1291,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
     H = get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
 
     # Unitary part of Lindbladian
-    L += -1im * my_kron(H, eye(2^N)) + 1im * my_kron(eye(2^N), transpose(H)) 
+    L += -1im * my_kron(H, eye(2^N)) # + 1im * my_kron(eye(2^N), transpose(H)) 
 
     for n in 1:N
         for m in 1:N
@@ -1290,7 +1301,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
 
             tmp3 = tmp1' * tmp2 # the dash is the dagger
             
-            L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((my_kron(tmp2, transpose(tmp1'))) - 0.5*(my_kron(tmp3, eye(2^N))) -0.5*(my_kron(eye(2^N), transpose(tmp3))))
+            L += environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((my_kron(tmp2, transpose(tmp1'))) - 0.5*(my_kron(tmp3, eye(2^N))) -0.5*(my_kron(eye(2^N), transpose(tmp3))))
 
         end
     end
@@ -1481,7 +1492,7 @@ function project_zeroq(M)
 
 end
 
-function get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type)
+function get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, aT, env_corr_type; edges_only = false)
 
     ldim = binomial(N, div(N, 2))^2
 
@@ -1499,17 +1510,36 @@ function get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_o
 
     if aD_0 != 0
 
-        for n in 1:N
-            for m in 1:N
+        if edges_only == false
 
-                tmp1 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, n, aT))
-                tmp2 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, m, aT))
+            for n in 1:N
+                for m in 1:N
 
-                tmp3 = tmp1' * tmp2 # the dash is the dagger
-                
-                L += aD_0 * environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * ((my_kron(tmp2, conj(tmp1))) - 0.5*(my_kron(tmp3, idnt_r)) -0.5*(my_kron(idnt_r, transpose(tmp3))))
+                    tmp1 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, n, aT))
+                    tmp2 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, m, aT))
 
+                    tmp3 = tmp1' * tmp2 # the dash is the dagger
+                    
+                    L += environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (my_kron(tmp2, conj(tmp1)) - 0.5*my_kron(tmp3, idnt_r) -0.5*my_kron(idnt_r, transpose(tmp3)))
+
+                end
             end
+
+        else
+
+            for n in [1, N]
+                for m in [1, N]
+
+                    tmp1 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, n, aT))
+                    tmp2 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, m, aT))
+
+                    tmp3 = tmp1' * tmp2 # the dash is the dagger
+                    
+                    L += environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (my_kron(tmp2, conj(tmp1)) - 0.5*my_kron(tmp3, idnt_r) -0.5*my_kron(idnt_r, transpose(tmp3)))
+
+                end
+            end
+            
         end
 
     end
@@ -1856,6 +1886,32 @@ function get_dirac_vacuum_density_matrix(sites)
 
 end
 
+function get_dirac_vacuum_mps(sites; flip_sites = [])
+
+    N = length(sites)
+    state = [isodd(n) ? "1" : "0" for n = 1:N]
+    state = []
+    for n in 1:N
+        if isodd(n)
+            if n in flip_sites
+                push!(state, "0")
+            else
+                push!(state, "1")
+            end
+        else
+            if n in flip_sites
+                push!(state, "1")
+            else
+                push!(state, "0") 
+            end
+        end
+    end
+    mps = MPS(sites, state)
+   
+    return mps
+
+end
+
 function get_total_charge_reduced_operator_sparse(N)
 
     res = sparse(I, binomial(N, div(N, 2)), binomial(N, div(N, 2)))
@@ -1864,5 +1920,937 @@ function get_total_charge_reduced_operator_sparse(N)
     end
 
     return res
+
+end
+
+function get_delta_tensor(idx)
+
+    s1, s2 = dag(idx), dag(idx')
+    d = ITensor(diagm(0 => ones(Int, dim(s1)))[:, end:-1:1], s1, s2)
+
+    return d
+
+end
+
+function reverse_dir(t, idx)
+    return noprime(t*get_delta_tensor(idx); :tags => tags(idx))
+end
+
+function rho_vec_to_mps(rho_vec)
+
+    N = length(rho_vec)
+
+    mps = MPS(2*N)
+
+    for i in 1:N
+
+        # this object has 2 physical legs and we want to svd between them to seperate them into two mps tensors
+        M = rho_vec[i]
+
+        # picks the left link and the dashed site indices for the U of SVD
+        left_inds_M = (inds(M; :tags => "Link,l=$(i-1)"), inds(M; :plev => 1))
+
+        U, S, V = ITensors.svd(M, left_inds_M; leftdir = ITensors.In, rightdir = ITensors.In)
+        V = S*V
+
+        # Fix U indices
+        if i != 1
+            replacetags!(U, "Link,l=$(i-1)", "Link,l=$(2*i-2)") # change tag of left link to mps convention
+        end
+        replacetags!(U, "Link,u", "Link,l=$(2*i-1)") # change tag of svd link to mps convention
+        replacetags!(U, "S=1/2,Site,n=$(i)", "S=1/2,Site,n=$(2*i-1)") # change the label of the second physical index from i to 2*i-1
+        mps[2*i-1] = U
+
+        # Fix V indices
+        if i != N # if i == N there is no right link
+            replacetags!(V, "Link,l=$(i)", "Link,l=$(2*i)") # same as the line above but for the right link
+        end
+        replacetags!(V, "Link,u", "Link,l=$(2*i-1)") # change tag of svd link to mps convention (here it is Link,u because of V = S*V above)
+        replacetags!(V, "S=1/2,Site,n=$(i)", "S=1/2,Site,n=$(2*i)") # change the label of the second physical index from i to 2*i
+        # V = reverse_dir(V, inds(V; :tags => "Site")[1]) # reverse the physical leg direction from in to out - this is mandatory for constructing MPO with autoMPO
+        mps[2*i] = V
+
+    end
+
+    return noprime(mps)
+
+end
+
+function compare(z1::Complex, z2::Complex)
+    real(z1) > real(z2)
+end
+
+function get_double_aH_Hamiltonian(sites, x, l_0, ma, lambda, side)
+
+    """
+    This gives aH Hamiltonian
+
+    side specifies "left" or "right" to imply H tensor product I or vice versa
+
+    """
+
+    N = div(length(sites), 2)
+
+    opsum = OpSum()
+
+    for n in 1:N-1
+
+        if side == "left"
+            n_idx = 2*n-1
+        else
+            n_idx = 2*n 
+        end
+        
+        for m in n+1:N
+
+            if side == "left"
+                m_idx = 2*m-1
+            else
+                m_idx = 2*m
+            end
+            
+            # Long range ZZ interaction term
+            opsum += 0.25*(1/x)*(N-m+lambda),"Z",n_idx,"Z",m_idx
+
+        end
+
+        # Kinetic term
+        opsum += 0.5,"S+",n_idx,"S-",n_idx+2
+        opsum += 0.5,"S-",n_idx,"S+",n_idx+2
+
+        opsum += (1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n_idx
+        
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n_idx
+
+    end
+
+    if side == "left"
+        opsum += (0.5*ma*(-1)^(N-1)),"Z",2*N-1
+        opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",1
+    else
+        opsum += (0.5*ma*(-1)^(N-1)),"Z",2*N
+        opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",2
+    end
+
+    return opsum
+
+end
+
+function get_double_aH_Hamiltonian_taylor_part(sites, x, l_0, ma, lambda, side)
+
+    """
+    This gives aH Hamiltonian
+
+    side specifies "left" or "right" to imply H tensor product I or vice versa
+
+    """
+
+    N = div(length(sites), 2)
+
+    opsum = OpSum()
+
+    for n in 1:N-1
+
+        if side == "left"
+            n_idx = 2*n-1
+        else
+            n_idx = 2*n 
+        end
+        
+        for m in n+1:N
+
+            if side == "left"
+                m_idx = 2*m-1
+            else
+                m_idx = 2*m
+            end
+            
+            # Long range ZZ interaction term
+            opsum += 0.25*(1/x)*(N-m+lambda),"Z",n_idx,"Z",m_idx
+
+        end
+
+        opsum += (1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n_idx
+        
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n_idx
+
+    end
+
+    if side == "left"
+        opsum += (0.5*ma*(-1)^(N-1)),"Z",2*N-1
+        opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",1
+    else
+        opsum += (0.5*ma*(-1)^(N-1)),"Z",2*N
+        opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",2
+    end
+
+    return opsum
+
+end
+
+function get_Lindblad_dissipator(sites, x, l_0, ma, lambda, aT, aD, env_corr_type, sigma_over_a)
+
+    N = div(length(sites), 2)
+    n, m = 1, 1
+    res = environment_correlator(env_corr_type, n, m, aD, sigma_over_a) * (-0.5*get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5*get_aLndag_aLm(2*n, 2*m, aT, sites, "right"))
+
+    for n in 1:N
+        for m in 1:N
+            if (n == 1) && (m == 1)
+                continue
+            end
+            res += environment_correlator(env_corr_type, n, m, aD, sigma_over_a) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
+        end
+    end
+
+    return MPO(res, sites)
+
+end
+
+function get_Lindblad(sites, x, l_0, ma, lambda, aT, aD, env_corr_type, sigma_over_a)
+
+    N = div(length(sites), 2)
+    res = -1im*get_double_aH_Hamiltonian(sites, x, l_0, ma, lambda, "left")
+    res += 1im*get_double_aH_Hamiltonian(sites, x, l_0, ma, lambda, "right")
+    if aD != 0
+        for n in 1:N
+            for m in 1:N
+                res += environment_correlator(env_corr_type, n, m, aD, sigma_over_a) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
+            end
+        end
+    end
+
+    return MPO(res, sites)
+
+end
+
+function trace_mps(mps)
+
+    sites = siteinds(mps)
+    l = length(mps)
+
+    i = 1
+    left, right = 2*i-1, 2*i
+    res = mps[left]*mps[right]*dag(delta(sites[left], sites[right]))
+
+    for i in 2:div(l,2)
+        left, right = 2*i-1, 2*i
+        res *= mps[left]*mps[right]*dag(delta(sites[left], sites[right]))
+    end
+
+    return res[1]
+
+end
+
+function measure_z(mps, site)
+
+    sites = siteinds(mps)
+    l = length(mps)
+
+    z = op("Z", sites[site])
+    mps = apply(z, mps)
+
+    i = 1
+    left, right = 2*i-1, 2*i
+    res = mps[left]*mps[right]*dag(delta(sites[left], sites[right]))
+
+    for i in 2:div(l,2)
+        left, right = 2*i-1, 2*i
+        res *= mps[left]*mps[right]*dag(delta(sites[left], sites[right]))
+    end
+
+    return res[1]
+
+end
+
+function measure_z_config(mps; left = true)
+
+    n = length(mps)
+    z_config = []
+    if left
+        for site in 1:2:n
+            push!(z_config, measure_z(mps, site))
+        end
+    else
+        for site in 2:2:n
+            push!(z_config, measure_z(mps, site))
+        end
+    end
+
+    return z_config
+
+end
+
+function measure_particle_number(mps)
+
+    n = length(mps)
+    N = div(n, 2)
+    z_config = []
+    for site in 1:2:n-1
+        push!(z_config, measure_z(mps, site))
+    end
+
+    res = 0
+    for (idx, element) in enumerate(z_config)
+
+        res += 0.5*(-1)^(idx-1)*element
+
+    end
+
+    return 0.5*N + res/trace_mps(mps)
+
+end
+
+function get_aLm_aLndag(n, m, aT, sites)
+
+    """
+    Gives the operator aLm tensor product aLndagger so aLm acts on the left side system and aLndagger on the right
+    """
+
+    N = div(length(sites), 2)
+    
+    n_phys, m_phys = div(n, 2), div(m + 1, 2)
+
+    opsum = OpSum()
+
+    opsum += 0.25*(-1)^(n_phys+m_phys),"Z",m,"Z",n
+
+    opsum += 0.25*(-1)^(n_phys+m_phys),"Z",n
+
+    opsum += 0.25*(-1)^(n_phys+m_phys),"Z",m
+
+    opsum += 0.25*(-1)^(n_phys+m_phys),"Id",1
+
+    if (n_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S-",n-2,"S+",n
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S+",n-2,"S-",n
+    end
+
+    if (n_phys != N)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S-",n,"S+",n+2
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S+",n,"S-",n+2
+    end
+
+    if (m_phys != 1)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S-",m-2,"S+",m
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S+",m-2,"S-",m
+    end
+    
+    if (m_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S-",m,"S+",m+2
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S+",m,"S-",m+2
+    end
+
+    if (m_phys != 1)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S-",m-2,"S+",m,"Z",n
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S+",m-2,"S-",m,"Z",n
+    end
+    
+    if (m_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S-",m,"S+",m+2,"Z",n
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S+",m,"S-",m+2,"Z",n
+    end
+
+    if (n_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"Z",m,"S-",n-2,"S+",n
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"Z",m,"S+",n-2,"S-",n
+    end
+    
+    if (n_phys != N)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"Z",m,"S-",n,"S+",n+2
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"Z",m,"S+",n,"S-",n+2
+    end
+
+    if (n_phys != 1) && (m_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m-2,"S-",m,"S+",n-2,"S-",n
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m-2,"S-",m,"S-",n-2,"S+",n
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m-2,"S+",m,"S+",n-2,"S-",n
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m-2,"S+",m,"S-",n-2,"S+",n
+    end
+
+    if (m_phys != 1) && (n_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m-2,"S-",m,"S-",n,"S+",n+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m-2,"S-",m,"S+",n,"S-",n+2
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m-2,"S+",m,"S+",n,"S-",n+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m-2,"S+",m,"S-",n,"S+",n+2
+    end
+
+    if (m_phys != N) && (n_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m,"S-",m+2,"S-",n-2,"S+",n
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m,"S-",m+2,"S+",n-2,"S-",n
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m,"S+",m+2,"S+",n-2,"S-",n
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m,"S+",m+2,"S-",n-2,"S+",n
+    end
+    
+    if (n_phys != N) && (m_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m,"S-",m+2,"S+",n,"S-",n+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",m,"S-",m+2,"S-",n,"S+",n+2
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m,"S+",m+2,"S-",n,"S+",n+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",m,"S+",m+2,"S+",n,"S-",n+2
+    end
+
+    return opsum
+    
+end
+
+function get_aLndag_aLm(n, m, aT, sites, side)
+
+    """
+    Gives the operator aL_n_dagger tensor product aL_m can be either acting all on the left or all on the right
+    """
+
+    N = div(length(sites), 2)
+
+    if side == "left"
+        n_phys, m_phys = div(n + 1, 2), div(m + 1, 2)
+    else
+        n_phys, m_phys = div(n, 2), div(m, 2)
+    end
+    
+    opsum = OpSum()
+
+    opsum += 0.25*(-1)^(n_phys + m_phys),"Z",n,"Z",m
+
+    opsum += 0.25*(-1)^(n_phys + m_phys),"Z",n
+
+    opsum += 0.25*(-1)^(n_phys + m_phys),"Z",m
+
+    if side == "left"
+        opsum += 0.25*(-1)^(n_phys + m_phys),"Id",1
+    else
+        opsum += 0.25*(-1)^(n_phys + m_phys),"Id",2
+    end
+
+    if (n_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S-",n-2,"S+",n
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S+",n-2,"S-",n
+    end
+
+    if (n_phys != N)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S-",n,"S+",n+2
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S+",n,"S-",n+2
+    end
+
+    if (m_phys != 1)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S-",m-2,"S+",m
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S+",m-2,"S-",m
+    end
+    
+    if (m_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S-",m,"S+",m+2
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S+",m,"S-",m+2
+    end
+
+    if (n_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S-",n-2,"S+",n,"Z",m
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S+",n-2,"S-",n,"Z",m
+    end
+    
+    if (n_phys != N)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"S-",n,"S+",n+2,"Z",m
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"S+",n,"S-",n+2,"Z",m
+    end
+
+    if (m_phys != 1)
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"Z",n,"S-",m-2,"S+",m
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"Z",n,"S+",m-2,"S-",m
+    end
+    
+    if (m_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(16*aT)),"Z",n,"S-",m,"S+",m+2
+        opsum += ((-1)^(n_phys + m_phys)/(16*aT)),"Z",n,"S+",m,"S-",m+2
+    end
+
+    if (n_phys != 1) && (m_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n-2,"S-",n,"S+",m-2,"S-",m
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n-2,"S-",n,"S-",m-2,"S+",m
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n-2,"S+",n,"S+",m-2,"S-",m
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n-2,"S+",n,"S-",m-2,"S+",m
+    end
+
+    if (n_phys != 1) && (m_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n-2,"S-",n,"S-",m,"S+",m+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n-2,"S-",n,"S+",m,"S-",m+2
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n-2,"S+",n,"S+",m,"S-",m+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n-2,"S+",n,"S-",m,"S+",m+2
+    end
+
+    if (n_phys != N) && (m_phys != 1)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n,"S-",n+2,"S-",m-2,"S+",m
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n,"S-",n+2,"S+",m-2,"S-",m
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n,"S+",n+2,"S+",m-2,"S-",m
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n,"S+",n+2,"S-",m-2,"S+",m
+    end
+    
+    if (n_phys != N) && (m_phys != N)
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n,"S-",n+2,"S+",m,"S-",m+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S+",n,"S-",n+2,"S-",m,"S+",m+2
+        opsum += (-(-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n,"S+",n+2,"S-",m,"S+",m+2
+        opsum += ((-1)^(n_phys + m_phys)/(64*aT^2)),"S-",n,"S+",n+2,"S+",m,"S-",m+2
+    end
+
+    return opsum
+
+end
+
+function get_Lindblad_Hamiltonian_part(sites, x, l_0, ma, lambda, aT, aD, env_corr_type, sigma_over_a)
+
+    res = -1im*get_double_aH_Hamiltonian(sites, x, l_0, ma, lambda, "left")
+    res += 1im*get_double_aH_Hamiltonian(sites, x, l_0, ma, lambda, "right")
+    
+    return res
+
+end
+
+function get_mpo_taylor_expansion(mpo, order, cutoff, sites)
+
+    """
+    Returns the taylor expansion to the given input order of the mpo as 1 + mpo + mpo * mpo / factorial(2) + mpo * mpo * mpo / factorial(3) + ... etc
+    """
+
+    l = [mpo]
+    for i in 2:order
+        push!(l, apply(l[end], mpo/i; cutoff = cutoff))
+    end
+
+    tmp1 = sum(l)
+    tmp2 = MPO(sites, "Id")
+    
+    for i in 2:2:length(tmp2)
+        tmp2[i] = swapprime(tmp2[i], 0, 1; :tags => "Site")
+    end
+
+    return add(tmp1, tmp2; cutoff = 0)
+
+end
+
+function get_Lindblad_taylor_part(sites, x, l_0, ma, lambda, aT, aD, env_corr_type, sigma_over_a)
+
+    N = div(length(sites), 2)
+    res = -1im*get_double_aH_Hamiltonian_taylor_part(sites, x, l_0, ma, lambda, "left")
+    res += 1im*get_double_aH_Hamiltonian_taylor_part(sites, x, l_0, ma, lambda, "right")
+    if aD != 0
+        for n in 1:N
+            for m in 1:N
+                res += environment_correlator(env_corr_type, n, m, aD, sigma_over_a) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
+            end
+        end
+    end
+
+    return MPO(res, sites)
+
+end
+
+function get_odd(sites, a, gate_lists)
+
+    """
+    sites are the site indices of the MPS to which the odd gates will act on
+
+    a is usually the time step or the time step divided by 2
+
+    gate_lists is a list of lists specifically nn_odd from the function get_odd_even_taylor_groups in which nn_odd is explained
+    """
+
+    gates = []
+
+    l = length(sites)
+
+    for (n_idx, n) in enumerate(1:4:(l-3))
+
+        group_opsum = gate_lists[n_idx] # an opsum with terms lying in the range n:n+3, the actual operators in this opsum always have site numbers from 1 to 4
+        group_opsum_indices = sites[n:n+3] # these are the actual indices that will be given to the ITensor below to apply the gate to the appropriate sites
+
+        gate = ITensor(group_opsum, group_opsum_indices)
+        Gj = exp(a * gate)
+
+        # Take the transpose on the even sites which correspond to legs which would have been bottom legs on an MPO
+        swapprime!(Gj, 0, 1; :tags => "n=$(n+1)")
+        swapprime!(Gj, 0, 1; :tags => "n=$(n+3)")
+
+        push!(gates, Gj)
+
+    end
+
+    return gates
+
+end
+
+function get_even(sites, a, gate_lists)
+
+    """
+    sites are the site indices of the MPS to which the even gates will act on
+
+    a is usually the time step or the time step divided by 2
+
+    gate_lists is a list of lists specifically nn_even from the function get_odd_even_taylor_groups in which nn_even is explained
+    """
+
+    gates = []
+
+    l = length(sites)
+
+    for (n_idx, n) in enumerate(3:4:(l-3))
+
+        group_opsum = gate_lists[n_idx] # an opsum with terms lying in the range n:n+3, the actual operators in this opsum always have site numbers from 1 to 4
+        group_opsum_indices = sites[n:n+3] # these are the actual indices that will be given to the ITensor below to apply the gate to the appropriate sites
+
+        gate = ITensor(group_opsum, group_opsum_indices)
+        Gj = exp(a * gate)
+
+        # Take the transpose on the even sites which correspond to legs which would have been bottom legs on an MPO
+        swapprime!(Gj, 0, 1; :tags => "n=$(n+1)")
+        swapprime!(Gj, 0, 1; :tags => "n=$(n+3)")
+
+        push!(gates, Gj)
+
+    end
+
+    return gates
+end
+
+function get_Lindblad_opsum(sites, x, l_0, ma, lambda, aT, aD, env_corr_type, sigma_over_a)
+
+    N = div(length(sites), 2)
+    res = -1im*get_double_aH_Hamiltonian(sites, x, l_0, ma, lambda, "left")
+    res += 1im*get_double_aH_Hamiltonian(sites, x, l_0, ma, lambda, "right")
+    if aD != 0
+        for n in 1:N
+            for m in 1:N
+                res += environment_correlator(env_corr_type, n, m, aD, sigma_over_a) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
+            end
+        end
+    end
+
+    return res
+
+end
+
+function get_odd_even_taylor_groups(opsum, sites)
+
+    """
+    This function takes as input an OpSum and the sites of the MPS and returns nn_odd (nearest neighbour odd), nn_even and taylor.
+    
+    The gates considered odd are 4 site gates having a left most index 1:4:l-3 where l is the length of sites. 
+    
+    The gates considered even are 4 site gates having a left most index 3:4:l-3. 
+    
+    Everything else is considered to be in the taylor group which will be taylor expanded in the
+    trotterization scheme: odd/2 taylor/2 even taylor/2 odd/2 (second order trotterization).
+
+    The nn_odd is a list of lists where each list holds all the gates lying within the group of sites "left most index of group up to left most index of group + 3"
+    where the left most index of each group is defined by 1:4:l-3. Similarly for nn_even.
+    """
+
+    function pad_op(element, group_left)
+
+        """
+        This function takes an element from an OpSum e.g. a Scaled{ComplexF64, Prod{Op}} and a group_left index which
+        stands for the beginning of a group of 4 sites.
+
+        The purpose of this function is most easily explained with an example:
+
+        element = 0.5,"Z",2,"S-",4
+        group_left = 2
+
+        Here group_left is 2 so our sites span 2, 3, 4, 5 and the operators in the element are going to be shifted
+        to have indices 1, 2, 3, 4 and then accordingly we will place the operators on the sites putting identities where we had no
+        operators resulting in:
+
+        0.5,"I",1,"I",2,"I",3,"I",4,"Z",1,"S-",3 where the first part is padding with identities and then the operators are appropriately placed within 1, 2, 3, 4
+
+        The reason we need this function is to do build the exponential of gates for time evolution where the ITensor function will get the opsum of many of this
+        elements but the indices will not be 1, 2, 3, 4 but rather sites[group_left:group_left+3] where sites are the actual site indices of the MPS
+        """
+
+        element_coefficient = element.args[1]      
+        element_list = [[ITensors.which_op(element[i]), ITensors.site(element[i]) - group_left + 1] for i in 1:length(element)] # result e.g. [["Z", 1], ["S-", 3]] using the example above
+        el = [["I", i] for i in 1:4] # put identities on all sites to cover the ones which don't have a non-trivial operator acting on them in the element (padding)
+        for e in element_list # put in the non-trivial operators as gathered from the element input
+            push!(el, [e[1], e[2]]) 
+        end
+        # Put both the identities and the non-trivial operators from the element input into one opsum
+        complete_opsum = OpSum()
+        complete_opsum += element_coefficient,el[1][1],el[1][2]
+        for i in 2:length(el)
+            complete_opsum *= el[i][1],el[i][2]
+        end
+
+        return complete_opsum
+
+    end
+
+    l = length(sites)
+    taylor = OpSum() # defined as anything that does not fall into the following two categories below
+    nn_odd = [OpSum() for _ in 1:4:l-3] # defined as anything that lies between 1 and 4 inclusive, 5 and 8, 9 and 12 etc
+    nn_even = [OpSum() for _ in 3:4:l-3] # defined as anything that lies between 3 and 6 inclusive, 7 and 10
+    
+    odd_index_groups_list = [[i, i+1, i+2, i+3] for i in 1:4:l-3]
+    odd_index_groups = reshape(reduce(vcat, odd_index_groups_list'), (length(odd_index_groups_list), 4)) # make the list of lists into a matrix for convenience
+    even_index_groups_list = [odd_index_groups_list[i] .+ 2 for i in 1:length(odd_index_groups_list)-1]
+    even_index_groups = reshape(reduce(vcat, even_index_groups_list'), (length(even_index_groups_list), 4)) # make the list of lists into a matrix for convenience
+    
+    for element in opsum 
+
+        idxs = ITensors.sites(element) # where the element acts non-trivially
+        left, right = minimum(idxs), maximum(idxs) # left and right most sites the gate is acting on
+        
+        gate_span = right - left + 1
+        if gate_span <= 4 # if it can fit within an even or odd gate
+
+            odd_group_of_left_index = findfirst(x -> x == left, odd_index_groups) # the index of the group to which the element can belong to (this can also return nothing when the element cannot belong to an odd group)
+            if odd_group_of_left_index !== nothing
+                odd_exists = true
+                odd_group_of_left_index = odd_group_of_left_index[1] # just take the index of the group and discard the second element which is the position within the group
+            else
+                odd_exists = false
+            end
+            if odd_exists
+                # the left and right most sites of the odd group the element can belong to
+                min_of_odd_group, max_of_odd_group = minimum(odd_index_groups[odd_group_of_left_index, :]), maximum(odd_index_groups[odd_group_of_left_index, :])
+                if left >= min_of_odd_group && right <= max_of_odd_group
+                    odd_possible = true
+                else
+                    odd_possible = false
+                end
+            else
+                odd_possible = false
+            end
+    
+            # same as above but for even
+            even_group_of_left_index = findfirst(x -> x == left, even_index_groups)
+            if even_group_of_left_index !== nothing
+                even_exists = true
+                even_group_of_left_index = even_group_of_left_index[1]
+            else
+                even_exists = false
+            end
+            if even_exists
+                min_of_even_group, max_of_even_group = minimum(even_index_groups[even_group_of_left_index, :]), maximum(even_index_groups[even_group_of_left_index, :])
+                if left >= min_of_even_group && right <= max_of_even_group
+                    even_possible = true
+                else
+                    even_possible = false
+                end
+            else
+                even_possible = false
+            end
+    
+            if odd_possible && even_possible
+    
+                if length(nn_odd[odd_group_of_left_index]) < length(nn_even[even_group_of_left_index]) # if the gate can go in both an odd and an even choose the one with less number of gates already
+    
+                    nn_odd[odd_group_of_left_index] += pad_op(element, min_of_odd_group)
+                    
+                else
+    
+                    nn_even[even_group_of_left_index] += pad_op(element, min_of_even_group)
+
+                end
+            
+            elseif odd_possible
+    
+                nn_odd[odd_group_of_left_index] += pad_op(element, min_of_odd_group)
+
+    
+            elseif even_possible
+    
+                nn_even[even_group_of_left_index] += pad_op(element, min_of_even_group)
+    
+            else
+    
+                taylor += element
+    
+            end
+            
+        else
+    
+            taylor += element
+    
+        end
+    end
+
+    return nn_odd, nn_even, taylor
+
+end
+
+function apply_swap_to_pairs(mps, swap_tensor)
+
+    sites = siteinds(mps)
+
+    res = MPS(sites)
+
+    for i in 1:2:length(mps)-1
+
+        gate = ITensor(swap_tensor, dag(sites[i]), dag(sites[i+1]), dag(sites[i]'), dag(sites[i+1]'))
+
+        tmp = noprime(mps[i]*mps[i+1]*gate)
+        
+        res[i], res[i+1] = ITensors.qr(tmp, commoninds(mps[i], tmp); tags = "Link,l=$(i)")
+    
+    end
+
+    return res
+
+end
+
+function hermitian_conjugate_purified_density_matrix_mps(mps, swap_tensor)
+
+    return dag(apply_swap_to_pairs(mps, swap_tensor))
+
+end
+
+function purified_density_matrix_from_mps_to_matrix(mps)
+
+    n = div(length(mps), 2)
+    a = contract(mps)
+    top_inds = []
+    bottom_inds = []
+    i = 0
+    for ind in inds(a)
+        if i % 2 == 0
+            push!(top_inds, ind)
+        else
+            push!(bottom_inds, ind)
+        end
+        i += 1
+    end
+    a = Array(a, top_inds..., bottom_inds...)
+    a = reshape(a, 2^n, 2^n)
+    
+    return a
+
+end
+
+function get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, side)
+
+    """
+    This gives aH Hamiltonian
+
+    side specifies "left" or "right" to imply H tensor product I or vice versa
+
+    """
+
+    N = div(length(sites), 2)
+
+    opsum = OpSum()
+
+    for n in 1:N-1
+
+        if side == "left"
+            n_idx = 2*n-1
+        else
+            n_idx = 2*n 
+        end
+        
+        for m in n+1:N
+
+            if side == "left"
+                m_idx = 2*m-1
+            else
+                m_idx = 2*m
+            end
+            
+            # Long range ZZ interaction term
+            opsum += 0.25*(1/x)*(N-m+lambda),"Z",n_idx,"Z",m_idx
+
+        end
+
+        # Kinetic term
+        opsum += 0.5,"S+",n_idx,"S-",n_idx+2
+        opsum += 0.5,"S-",n_idx,"S+",n_idx+2
+        
+        opsum += (0.5*ma*(-1)^(n-1)),"Z",n_idx
+
+    end
+
+    if side == "left"
+        opsum += (0.5*ma*(-1)^(N-1)),"Z",2*N-1
+    else
+        opsum += (0.5*ma*(-1)^(N-1)),"Z",2*N
+    end
+
+    return opsum
+
+end
+
+function get_Lindblad_opsum_without_l0_terms(sites, x, ma, lambda, aT, aD, env_corr_type, inputs, dissipator_sites)
+
+    N = div(length(sites), 2)
+    res = -1im*get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, "left")
+    res += 1im*get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, "right")
+    
+    if aD != 0
+        for n in dissipator_sites
+            for m in dissipator_sites
+                res += environment_correlator(env_corr_type, n, m, aD, inputs) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
+            end
+        end
+    end
+
+    return res
+
+end
+
+function get_double_aH_Hamiltonian_just_l0_terms(sites, x, l_0, lambda, side)
+
+    """
+    This gives aH Hamiltonian
+
+    side specifies "left" or "right" to imply H tensor product I or vice versa
+
+    """
+
+    N = div(length(sites), 2)
+
+    opsum = OpSum()
+
+    for n in 1:N-1
+
+        if side == "left"
+            n_idx = 2*n-1
+        else
+            n_idx = 2*n 
+        end
+        
+        opsum += (1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n_idx
+        
+    end
+
+    if side == "left"
+        opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",1
+    else
+        opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x) + (lambda*N/(8*x))),"Id",2
+    end
+
+    return opsum
+
+end
+
+function get_Lindblad_opsum_just_l0_terms(sites, x, l_0, lambda)
+
+    res = -1im*get_double_aH_Hamiltonian_just_l0_terms(sites, x, l_0, lambda, "left")
+    res += 1im*get_double_aH_Hamiltonian_just_l0_terms(sites, x, l_0, lambda, "right")
+    
+    return res
+
+end
+
+function get_applied_field(which_applied_field, inputs, t_over_a)
+
+    l_0_1 = inputs["l_0_1"]
+    
+    if which_applied_field == "constant"
+        return l_0_1
+    else
+        l_0_2 = inputs["l_0_2"]
+        a_omega = inputs["a_omega"]
+        if which_applied_field == "sauter"
+            return l_0_1 + l_0_2/cosh(a_omega*t_over_a)^2
+        elseif which_applied_field == "gaussian"
+            return l_0_1 + l_0_2*exp(-(a_omega*t_over_a)^2)
+        else # oscillatory case
+            return l_0_1 + l_0_2*cos(a_omega*t_over_a)
+        end
+    end
 
 end

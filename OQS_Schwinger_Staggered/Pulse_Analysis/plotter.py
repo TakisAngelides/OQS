@@ -21,6 +21,8 @@ max_4_list = []
 omega_6_list = []
 max_6_list = []
 
+c_list = {4 : 'r', 6 : 'g', 8 : 'b', 10 : 'k'}
+
 for file in os.listdir('h5_data'):
     
     f = h5py.File('h5_data/'+file, 'r')
@@ -58,27 +60,47 @@ for key, value in d.items():
     
     row = key.split('_')
     N, omega = row[1], row[3]
-    if N == '4':
-        linestyle = '--'
-    else:
-        linestyle = '-'
     at_list, spnd, max_val = value
     if (N == '4' and omega == max_om_4) or (N == '6' and omega == max_om_6):
-        plt.plot(at_list, spnd, label = r'$N$ = '+ f'{N}' + r', $\frac{\omega a}{ma}$ = ' + f'{float(omega):.3f}', linestyle = linestyle)
+        linestyle = '-'
+        plt.plot(at_list, spnd, c = c_list[int(N)], label = r'$N$ = '+ f'{N}' + r', $\frac{\omega a}{ma}$ = ' + f'{float(omega):.3f}', linestyle = linestyle)
         
 for key, value in ds.items():
     
     row = key.split('_')
     N = row[1]
     at_list, spnd, max_val = value
-    if N == '4':
-        linestyle = '--'
-    else:
+    linestyle = '--'
+    plt.plot(at_list, spnd, c = c_list[int(N)], label = r'$N$ = ' + f'{N}', linestyle = linestyle)
+    
+path_tmp = '/Users/takisangelides/Documents/PhD/Project_3_OQS/OQS/Closed_Schwinger_Staggered/HDF5'
+for file in os.listdir(path_tmp):
+    row = file.strip().split('_')
+    # try:
+    if len(row) != 12: 
+        continue
+    N, type_field, tau, cutoff, order, omega = row[1::2]
+    omega = omega[:-3]
+    if (N != '8') and (N != '10'):
+        continue
+    if N == '8':
+        if (tau != '0.001') or (cutoff != '1.0e-9'):
+            continue
+    if N == '10': 
+        if (tau != '0.0005') or (cutoff != '1.0e-13'):
+            continue
+    f = h5py.File(f'{path_tmp}/'+file, 'r')
+    at_list, pnd = np.array(f['at_list']), np.array(f['pnd'])
+    spnd = pnd - pnd[0]
+    if type_field == 'sauter':
         linestyle = '-'
-    plt.plot(at_list, spnd, label = r'$N$ = ' + f'{N}', linestyle = linestyle)
+        plt.plot(at_list, spnd, c = c_list[int(N)], label = r'$N$ = '+ f'{N}' + r', $\frac{\omega a}{ma}$ = ' + f'{float(omega):.3f}', linestyle = linestyle)
+    else:
+        linestyle = '--'
+        plt.plot(at_list, spnd, c = c_list[int(N)], label = r'$N$ = '+ f'{N}', linestyle = linestyle)
     
 plt.hlines(0, 0, max(at_list), color = 'gray', linestyle = ':', alpha = 0.5)
-plt.legend(loc = 'lower right', fontsize = 6.5)
+plt.legend(loc = 'lower right', fontsize = 5)
 plt.ylabel(r'Subtracted Particle Number Density (SPND)', fontsize = ylabel_font)
 plt.xlabel(r'$t/a$', fontsize = xlabel_font)
 plt.savefig('SPND_vs_at.pdf', dpi = 3000, transparent = True, bbox_inches = 'tight')

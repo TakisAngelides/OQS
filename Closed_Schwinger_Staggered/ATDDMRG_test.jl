@@ -5,24 +5,6 @@ using Statistics
 using Plots
 include("Utilities.jl")
 
-# N = parse(Int, ARGS[1])
-# tau = parse(Float64, ARGS[2])
-# cutoff = parse(Float64, ARGS[3])
-# tol = parse(Float64, ARGS[4])
-# x = parse(Float64, ARGS[5])
-# l_0 = parse(Float64, ARGS[6])
-# ma = parse(Float64, ARGS[7])
-# max_steps = parse(Int, ARGS[8])
-# project_number = parse(Int, ARGS[9])
-# l_0_initial = parse(Bool, ARGS[10])
-# h5_path = ARGS[11]
-# measure_every = parse(Int, ARGS[12])
-# h5_previous_path = ARGS[13]
-# lambda = parse(Float64, ARGS[14])
-# D = parse(Int, ARGS[15])
-# max_sweeps = parse(Int, ARGS[16])
-# file = h5open(h5_path, "w")
-
 function get_applied_field(at, l_0, l_0_small, type, omega)
 
     if type == "sauter"
@@ -55,7 +37,7 @@ function get_dmrg_results(N, x, l_0_initial, ma, lambda, tol, max_sweeps, D, fil
 
 end
 
-function run_attDMRG(N, tau, cutoff, tol, x, l_0, l_0_small, type, omega, ma, max_steps, l_0_initial, measure_every, h5_previous_path, lambda, D, max_sweeps, file)
+function run_attDMRG(N, tau, cutoff, tol, x, l_0, l_0_small, type, omega, ma, max_steps, l_0_initial, measure_every, h5_previous_path, lambda, D, max_sweeps, file, taylor_order)
 
     t = time()
 
@@ -84,7 +66,7 @@ function run_attDMRG(N, tau, cutoff, tol, x, l_0, l_0_small, type, omega, ma, ma
     Ho_mpo_list = get_exp_Ho(sites, -1im*tau/2) # odd/2
     He_mpo_list = get_exp_He(sites, -1im*tau) # even
     Ho_mpo_list_2 = get_exp_Ho(sites, -1im*tau) # odd
-    Hz_mpo = get_exp_Hz(sites, -1im*tau/2, x, l_0, ma) # 1+aH_z/2
+    Hz_mpo = get_exp_Hz(sites, -1im*tau/2, x, l_0, ma, taylor_order) # 1+aH_z/2
 
     at = 0.0
     push!(at_list, 0.0)
@@ -109,26 +91,32 @@ function run_attDMRG(N, tau, cutoff, tol, x, l_0, l_0_small, type, omega, ma, ma
         at += tau
         if type != "static"
             applied_field = get_applied_field(at, l_0, l_0_small, type, omega)
-            Hz_mpo = get_exp_Hz(sites, -1im*tau/2, x, applied_field, ma) # 1+aH_z/2
+            Hz_mpo = get_exp_Hz(sites, -1im*tau/2, x, applied_field, ma, taylor_order) # 1+aH_z/2
         end
 
-        if step == 1
-            apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)
-            mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
-            apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-            mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
-        elseif step == max_steps
-            apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
-            mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
-            apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-            mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
-            apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)    
-        else
-            apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
-            mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
-            apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-            mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
-        end
+        apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)
+        mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
+        mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)    
+
+        # if step == 1
+        #     apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)
+        #     mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        #     apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
+        #     mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        # elseif step == max_steps
+        #     apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
+        #     mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        #     apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
+        #     mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        #     apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)    
+        # else
+        #     apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
+        #     mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        #     apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
+        #     mps = apply(Hz_mpo, mps; cutoff = cutoff, normalize = true)
+        # end
         
         if step % measure_every == 0
 
@@ -158,31 +146,30 @@ function run_attDMRG(N, tau, cutoff, tol, x, l_0, l_0_small, type, omega, ma, ma
         write(file, "z_list_$(idx)", z_config_list[idx])
     end
 
-    pnd = []
+    pnd = Float64[]
     for i in 1:max_steps+1
         push!(pnd, 0.5 + (0.5/N)*sum([z_config_list[idx][i]*(-1)^(idx-1) for idx in 1:N]))
     end
-    spnd = pnd .- pnd[1]
-    
-    # p = plot(at_list, spnd)
-    # display(p)
 
-    return at_list, spnd
+    write(file, "pnd", pnd)
+
+    return at_list, pnd
 
 end
 
 let
 
-    N = 8
-    tau = 0.001
-    cutoff = 1e-9
+    N = 10
     tol = 1e-11
+    tau_max_steps_list = [[0.0005, 10000]]
+    taylor_order_list = [3]
+    cutoff_list = [1e-13]
+    type_list = ["sauter", "static"]
     x = 1
     l_0 = 0.02
     l_0_small = 0.5*0.02
     omega = 1.091
     ma = 1
-    max_steps = 2000
     project_number = 1
     l_0_initial = 0
     measure_every = 1
@@ -193,21 +180,50 @@ let
 
     p = plot()
 
-    for type in ["static", "sauter"]
+    for type in type_list
 
-        if type == "static"
-            l_0_val = l_0 + l_0_small
-        else
-            l_0_val = l_0
+        for taylor_order in taylor_order_list
+
+            for element in tau_max_steps_list
+
+                tau, max_steps = element[1], Int(element[2])
+
+                for cutoff in cutoff_list
+
+                    if type == "static"
+                        l_0_val = l_0 + l_0_small
+                    else
+                        l_0_val = l_0
+                    end
+                    
+                    h5_path = "/Users/takisangelides/Documents/PhD/Project_3_OQS/OQS/Closed_Schwinger_Staggered/HDF5/N_$(N)_type_$(type)_tau_$(tau)_cut_$(cutoff)_order_$(taylor_order)_om_$(omega).h5"
+                    
+
+                    if isfile(h5_path)
+
+                        file = h5open(h5_path, "r")
+
+                        at_list, pnd = read(file, "at_list"), read(file, "pnd")
+
+                        plot!(p, at_list, pnd.-pnd[1], label = "$(type), $(tau), $(cutoff), $(taylor_order)", legend = :bottomleft)
+
+                    else
+
+                        file = h5open(h5_path, "w")
+
+                        at_list, pnd = run_attDMRG(N, tau, cutoff, tol, x, l_0_val, l_0_small, type, omega, ma, max_steps, l_0_initial, measure_every, h5_previous_path, lambda, D, max_sweeps, file, taylor_order)
+
+                        plot!(p, at_list, pnd.-pnd[1], label = "$(type), $(tau), $(cutoff), $(taylor_order)")
+
+                    end
+
+                    close(file)
+
+                end
+
+            end
+
         end
-        h5_path = "/Users/takisangelides/Documents/PhD/Project_3_OQS/OQS/Closed_Schwinger_Staggered/test_$(type).h5"
-        file = h5open(h5_path, "w")
-
-        at_list, spnd = run_attDMRG(N, tau, cutoff, tol, x, l_0_val, l_0_small, type, omega, ma, max_steps, l_0_initial, measure_every, h5_previous_path, lambda, D, max_sweeps, file)
-
-        plot!(p, at_list, spnd, label = type)
-
-        close(file)
 
     end
 

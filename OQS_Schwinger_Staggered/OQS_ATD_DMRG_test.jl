@@ -11,11 +11,11 @@ using Statistics
 include("Utilities.jl")
 ITensors.disable_warn_order()
 
-N = 60
-tau = 0.001 # 1/N^2 # time step in time evolution rho -> exp(-tau L) after one step
-cutoff = 1e-9 # cutoff for SVD
+N = 20
+tau = 0.0001 # 1/N^2 # time step in time evolution rho -> exp(-tau L) after one step
+cutoff = 1e-11 # cutoff for SVD
 max_rho_D = 100
-max_steps = 100
+max_steps = 50
 tol = 1e-9 # tolerance for DMRG convergence and ATDDMRG convergence
 e = 1
 x = 1/(e)^2
@@ -25,7 +25,7 @@ l_0_small = 0.5*l_0
 type = "static"
 omega = 1.91*ma
 lambda = 0.0
-aD_0 = 0.1
+aD_0 = 1
 beta = 0.001
 aT = 1/beta
 sigma_over_a = 3.0
@@ -33,9 +33,6 @@ env_corr_type = "delta"
 max_sweeps = 1000
 l_0_initial = 0.0
 measure_every = 1 # this determines how often to save rho and measure the energy in ATDDMRG
-get_entanglement = false
-get_state_diff_norm = false
-get_sparse = false
 
 function get_applied_field(at, l_0, l_0_small, type, omega)
 
@@ -63,15 +60,15 @@ function run_ATDDMRG()
     H = get_aH_Hamiltonian(sites, x, l_0_initial, ma, lambda)
     sweeps = Sweeps(max_steps; maxdim = 100)
     observer = DMRGObserver(;energy_tol = tol)
-    gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 1, observer = observer, ishermitian = true)
+    gs_energy, gs = dmrg(H, mps, sweeps; outputlevel = 0, observer = observer, ishermitian = true)
     # println("The ground state energy was found to be $(gs_energy)\n")
     rho = outer(gs', gs; cutoff = cutoff)
 
     # Test Dirac vacuum as initial state
-    # state = [isodd(n) ? "1" : "0" for n = 1:N]
-    # mps = MPS(sites, state)
-    # rho = outer(mps', mps; cutoff = cutoff)
-    # rho = get_dirac_vacuum_density_matrix(sites)
+    state = [isodd(n) ? "1" : "0" for n = 1:N]
+    mps = MPS(sites, state)
+    rho = outer(mps', mps; cutoff = cutoff)
+    rho = get_dirac_vacuum_density_matrix(sites)
     
     # Get the exponential of the Lindblad terms for evolution 
     odd_gates_2 = get_exp_Ho_list(sites, -1im*tau/2) # odd/2

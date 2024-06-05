@@ -1,4 +1,4 @@
-function get_exp_Hz(sites, a, x, l_0, ma)
+function get_exp_Hz(sites, a, x, l_0, ma, order)
 
     """
     a = prefactor of H_z eg: -i tau / 2 to give exp(-i * tau * Hz / 2)
@@ -29,9 +29,16 @@ function get_exp_Hz(sites, a, x, l_0, ma)
     opsum += ((l_0^2)*(N-1)/(2*x) + (l_0*N/(4*x)) + (N^2)/16),"Id",1
 
     mpo = a*MPO(opsum, sites)
-
-    # exp(aHz/2) -> I + aHz/2
-    final_mpo = MPO(sites, "Id") + mpo 
+ 
+    if order == 1
+        final_mpo = MPO(sites, "Id") + mpo 
+    elseif order == 2
+        final_mpo = MPO(sites, "Id") + mpo + (1/2)*apply(mpo, mpo)
+    elseif order == 3
+        final_mpo = MPO(sites, "Id") + mpo + (1/2)*apply(mpo, mpo) + (1/6)*apply(mpo, apply(mpo, mpo))
+    else
+        final_mpo = MPO(sites, "Id") + mpo + (1/2)*apply(mpo, mpo) + (1/6)*apply(mpo, apply(mpo, mpo)) + (1/24)*apply(mpo, apply(mpo, apply(mpo, mpo)))
+    end
 
     return final_mpo
 
@@ -465,7 +472,7 @@ end
 
 function get_op(ops, positions, N; reverse_flag = true)
 
-    op_dict = Dict("X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]), "S-" => sparse([0 0; 1 0]), "S+" => sparse([0 1; 0 0]))
+    op_dict = Dict("I" => sparse([1 0; 0 1]), "X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]), "S-" => sparse([0 0; 1 0]), "S+" => sparse([0 1; 0 0]))
     zipped = TupleTools.sort(Tuple(zip(1:length(ops), positions, ops)); by = x -> x[2])
     old_positions = [element[2] for element in zipped] 
     old_ops = [element[3] for element in zipped]
