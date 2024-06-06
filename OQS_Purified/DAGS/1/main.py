@@ -116,7 +116,7 @@ def write_dag():
                                         for conserve_qns in ["true", "false"]:
                                         
                                             # Memory, CPU and maximum number of days to run
-                                            mem, cpu, days = 8, 8, 1
+                                            mem, cpu, days = 4, 1, 1
                                             
                                             # Job id for the dag job names and path to h5 for results
                                             job_id = counter_of_jobs

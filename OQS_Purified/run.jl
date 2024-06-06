@@ -234,7 +234,7 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
     println("Now writing the observables to results h5 file ", now())
     flush(stdout)
     z_configs_group = create_group(results_file, "z_configs_group")
-    for step in 0:number_of_time_steps
+    for step in 1:number_of_time_steps+1
         write_attribute(z_configs_group, "$(step)", z_configs[step])
     end
     println("Finished writing the observables to results h5 file ", now())
