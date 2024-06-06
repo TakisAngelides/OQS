@@ -100,7 +100,7 @@ mps = get_initial_state(which_initial_state, conserve_qns, N, results_file, inpu
 println("Finished getting the initial state ", now())
 flush(stdout)
 
-# Get the taylor, odd and even gates without the l0 terms
+# Get the taylor, odd and even opsum groups without the l0 terms
 println("Now getting the odd, even and taylor gates without the l0 terms ", now())
 flush(stdout)
 x = inputs["x"]
@@ -117,12 +117,10 @@ tau = inputs["tau"]
 dissipator_sites = inputs["ds"]
 opsum_without_l0_terms = get_Lindblad_opsum_without_l0_terms(sites, x, ma, lambda, aT, aD, env_corr_type, inputs, dissipator_sites)
 nn_odd_without_l0_terms, nn_even_without_l0_terms, taylor = get_odd_even_taylor_groups(opsum_without_l0_terms, sites)
-odd_without_l0_terms = get_odd(sites, tau/2, nn_odd_without_l0_terms)
-even_without_l0_terms = get_even(sites, tau, nn_even_without_l0_terms)
 println("Finished getting the odd, even and taylor gates without the l0 terms ", now())
 flush(stdout)
 
-# Get the odd and even gates with just the l0 terms
+# Get the odd and even opsum groups with just the l0 terms
 println("Now getting the odd, even and taylor gates with just the l0 terms ", now())
 flush(stdout)
 which_applied_field = inputs["waf"]
@@ -130,15 +128,14 @@ t_over_a = 0 # starting the time variable
 l_0 = get_applied_field(which_applied_field, inputs, t_over_a)
 opsum_just_l0_terms = get_Lindblad_opsum_just_l0_terms(sites, x, l_0, lambda)
 nn_odd_just_l0_terms, nn_even_just_l0_terms, _ = get_odd_even_taylor_groups(opsum_just_l0_terms, sites)
-odd_just_l0_terms = get_odd(sites, tau/2, nn_odd_just_l0_terms)
-even_just_l0_terms = get_even(sites, tau, nn_even_just_l0_terms)
 println("Finished getting the odd, even and taylor gates with just the l0 terms ", now())
 flush(stdout)
 
 # Gather the two odd and even gates
 println("Now putting all the even and odd together ", now())
 flush(stdout)
-odd, even = vcat(odd_without_l0_terms, odd_just_l0_terms), vcat(even_without_l0_terms, even_just_l0_terms)
+odd_just_l0_terms = get_odd(sites, tau/2, nn_odd_without_l0_terms .+ nn_odd_just_l0_terms)
+even_just_l0_terms = get_even(sites, tau, nn_even_without_l0_terms .+ nn_even_just_l0_terms)
 println("Finished putting all the even and odd together ", now())
 flush(stdout)
 
@@ -169,7 +166,7 @@ println("Finished getting the lists for the tracked observables ", now())
 flush(stdout)
 
 # Perform the time evolution
-function evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms, results_file, inputs, z_configs, mps)
+function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_terms, nn_even_without_l0_terms, results_file, inputs, z_configs, mps)
 
     cutoff = inputs["cutoff"]
     maxdim = inputs["md"]
@@ -190,9 +187,8 @@ function evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms
             push!(l_0_list, l_0)
             opsum_just_l0_terms = get_Lindblad_opsum_just_l0_terms(sites, x, l_0, lambda)
             nn_odd_just_l0_terms, nn_even_just_l0_terms, _ = get_odd_even_taylor_groups(opsum_just_l0_terms, sites)
-            odd_just_l0_terms = get_odd(sites, tau/2, nn_odd_just_l0_terms)
-            even_just_l0_terms = get_even(sites, tau, nn_even_just_l0_terms)
-            odd, even = vcat(odd_without_l0_terms, odd_just_l0_terms), vcat(even_without_l0_terms, even_just_l0_terms)
+            odd = get_odd(sites, tau/2, nn_odd_without_l0_terms .+ nn_odd_just_l0_terms)
+            even = get_even(sites, tau, nn_even_without_l0_terms .+ nn_even_just_l0_terms)
 
             # One time step with ATDDMRG
             apply_odd!(odd, mps, cutoff, maxdim)
@@ -234,8 +230,18 @@ function evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms
 
     end
 
+    # Write tracked observables to results h5 file
+    println("Now writing the observables to results h5 file ", now())
+    flush(stdout)
+    z_configs_group = create_group(results_file, "z_configs_group")
+    for step in 0:number_of_time_steps
+        write_attribute(z_configs_group, "$(step)", z_configs[step])
+    end
+    println("Finished writing the observables to results h5 file ", now())
+    flush(stdout)
+
 end
-evolve(which_applied_field, odd_without_l0_terms, even_without_l0_terms, results_file, inputs, z_configs, mps)
+evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_terms, nn_even_without_l0_terms, results_file, inputs, z_configs, mps)
 
 close(results_file)
 

@@ -92,8 +92,7 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    conserve_qns = "true"
-    number_of_time_steps_list = [3] # needs same length as tau list
+    number_of_time_steps_list = [20, 200] # needs same length as tau list
     taylor_expansion_cutoff_1 = 1e-15
     taylor_expansion_cutoff_2 = 1e-12
     maxdim = 300
@@ -101,58 +100,59 @@ def write_dag():
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
     which_initial_state = "dirac_vacuum_with_string" # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
-    
-    for N in [4]:
+        
+    for N in [4, 6]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2, N//2 + 1] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
-        for x in [1]:
-            for ma in [1]:
+        for x in [10]:
+            for ma in [0.1]:
                 for aD in [1]:
                     for aT in [10]:
-                        for tau_idx, tau in enumerate([0.001]):
+                        for tau_idx, tau in enumerate([0.01, 0.001]):
                             number_of_time_steps = number_of_time_steps_list[tau_idx]
-                            for cutoff in [1e-9]:
-                                for taylor_expansion_order in [1]:
-                                    for l_0_1 in [0]: # this is the constant part of the applied field
+                            for cutoff in [1e-10, 1e-11, 1e-12]:
+                                for taylor_expansion_order in [1, 2]:
+                                    for l_0_1 in [0.7]: # this is the constant part of the applied field
+                                        for conserve_qns in ["true", "false"]:
                                         
-                                        # Memory, CPU and maximum number of days to run
-                                        mem, cpu, days = 4, 1, 1
-                                        
-                                        # Job id for the dag job names and path to h5 for results
-                                        job_id = counter_of_jobs
-                                        counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
-                                        path_to_save_results_h5 = path_to_HDF5_folder + f'/{job_id}.h5'
-                                        
-                                        # Write inputs to h5
-                                        g = f_h5.create_group(f'{job_id}')       
-                                        g.attrs["N"] = N
-                                        g.attrs["x"] = x
-                                        g.attrs["ma"] = ma
-                                        g.attrs["lambda"] = lambd
-                                        g.attrs["aT"] = aT
-                                        g.attrs["aD"] = aD
-                                        g.attrs["cqns"] = conserve_qns
-                                        g.attrs["ds"] = dissipator_sites
-                                        g.attrs["tau"] = tau
-                                        g.attrs["nots"] = number_of_time_steps
-                                        g.attrs["tvaff"] = time_varying_applied_field_flag
-                                        g.attrs["tec_1"] = taylor_expansion_cutoff_1
-                                        g.attrs["tec_2"] = taylor_expansion_cutoff_2
-                                        g.attrs["cutoff"] = cutoff
-                                        g.attrs["md"] = maxdim
-                                        g.attrs["teo"] = taylor_expansion_order
-                                        g.attrs["l_0_1"] = l_0_1
-                                        g.attrs["waf"] = which_applied_field
-                                        g.attrs["env_corr_type"] = env_corr_type
-                                        g.attrs["wis"] = which_initial_state
-                                        g.attrs["fs"] = flip_sites
-            
-                                        # Write job to dag
-                                        job_name = f'{job_id}'
-                                        f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
-                                        f_dag.write(f'VARS ' + job_name + f' path_to_inputs_h5="{path_to_inputs_h5}" job_id="{job_id}" path_to_save_results_h5="{path_to_save_results_h5}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
-                                        f_dag.write('RETRY ' + job_name + ' 0\n')
-    
+                                            # Memory, CPU and maximum number of days to run
+                                            mem, cpu, days = 8, 8, 1
+                                            
+                                            # Job id for the dag job names and path to h5 for results
+                                            job_id = counter_of_jobs
+                                            counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
+                                            path_to_save_results_h5 = path_to_HDF5_folder + f'/{job_id}.h5'
+                                            
+                                            # Write inputs to h5
+                                            g = f_h5.create_group(f'{job_id}')       
+                                            g.attrs["N"] = N
+                                            g.attrs["x"] = x
+                                            g.attrs["ma"] = ma
+                                            g.attrs["lambda"] = lambd
+                                            g.attrs["aT"] = aT
+                                            g.attrs["aD"] = aD
+                                            g.attrs["cqns"] = conserve_qns
+                                            g.attrs["ds"] = dissipator_sites
+                                            g.attrs["tau"] = tau
+                                            g.attrs["nots"] = number_of_time_steps
+                                            g.attrs["tvaff"] = time_varying_applied_field_flag
+                                            g.attrs["tec_1"] = taylor_expansion_cutoff_1
+                                            g.attrs["tec_2"] = taylor_expansion_cutoff_2
+                                            g.attrs["cutoff"] = cutoff
+                                            g.attrs["md"] = maxdim
+                                            g.attrs["teo"] = taylor_expansion_order
+                                            g.attrs["l_0_1"] = l_0_1
+                                            g.attrs["waf"] = which_applied_field
+                                            g.attrs["env_corr_type"] = env_corr_type
+                                            g.attrs["wis"] = which_initial_state
+                                            g.attrs["fs"] = flip_sites
+                
+                                            # Write job to dag
+                                            job_name = f'{job_id}'
+                                            f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
+                                            f_dag.write(f'VARS ' + job_name + f' path_to_inputs_h5="{path_to_inputs_h5}" job_id="{job_id}" path_to_save_results_h5="{path_to_save_results_h5}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
+                                            f_dag.write('RETRY ' + job_name + ' 0\n')
+        
     # Close the dag file and the h5 input file
     f_dag.close() 
     f_h5.close()
