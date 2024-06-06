@@ -134,8 +134,8 @@ flush(stdout)
 # Gather the two odd and even gates
 println("Now putting all the even and odd together ", now())
 flush(stdout)
-odd_just_l0_terms = get_odd(sites, tau/2, nn_odd_without_l0_terms .+ nn_odd_just_l0_terms)
-even_just_l0_terms = get_even(sites, tau, nn_even_without_l0_terms .+ nn_even_just_l0_terms)
+odd = get_odd(sites, tau/2, nn_odd_without_l0_terms .+ nn_odd_just_l0_terms)
+even = get_even(sites, tau, nn_even_without_l0_terms .+ nn_even_just_l0_terms)
 println("Finished putting all the even and odd together ", now())
 flush(stdout)
 
