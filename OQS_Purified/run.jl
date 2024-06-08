@@ -197,6 +197,11 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
             mps = apply(taylor_mpo, mps; cutoff = cutoff, maxdim = maxdim)
             apply_odd!(odd, mps, cutoff, maxdim)
 
+            # Fix positivity and hermiticity
+            mps /= trace_mps(mps)
+            mps = get_rho_dagger_rho_purified(mps)
+            truncate!(mps; cutoff = cutoff)
+
             # Compute the tracked observables
             z_configs[step+1] = measure_z_config(mps)
 
@@ -219,6 +224,11 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
             apply_even!(even, mps, cutoff, maxdim)
             mps = apply(taylor_mpo, mps; cutoff = cutoff, maxdim = maxdim)
             apply_odd!(odd, mps, cutoff, maxdim)
+
+            # Fix positivity and hermiticity
+            mps /= trace_mps(mps)
+            mps = get_rho_dagger_rho_purified(mps)
+            truncate!(mps; cutoff = cutoff)
 
             # Compute the tracked observables
             z_configs[step+1] = measure_z_config(mps)

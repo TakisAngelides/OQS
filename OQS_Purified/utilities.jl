@@ -2854,3 +2854,65 @@ function get_applied_field(which_applied_field, inputs, t_over_a)
     end
 
 end
+
+
+function get_rho_dagger_rho_purified(mps)
+
+    """
+    This function takes a purified mps as input which represents rho the density matrix and performs 
+    the operation rho -> rho^dagger * rho to return another purified mps representing the result
+    """
+
+    mps_left = hermitian_conjugate_purified_density_matrix_mps(mps)
+
+    mps_right_contracted = MPS(div(length(mps), 2))
+    mps_left_contracted = MPS(div(length(mps_left), 2))
+    res = MPS(div(length(mps_left), 2))
+
+    for i in 1:length(mps_right_contracted)
+
+        mps_right_contracted[i] = mps[2*i-1]*mps[2*i] 
+        mps_left_contracted[i] = prime(mps_left[2*i-1]*mps_left[2*i])
+
+    end
+
+    for i in 1:length(mps_right_contracted)
+
+        idxs = inds(mps_left_contracted[i]; :tags => "Site,n=$(2*i)"), inds(mps_right_contracted[i]; :tags => "Site,n=$(2*i-1)")
+        D = dag(delta(idxs))
+        res[i] = mps_right_contracted[i] * mps_left_contracted[i] * D
+
+    end
+
+    for i in 2:length(res)-1
+
+        C_left = combiner(inds(res[i]; :tags => "Link,l=$(2*i-2)"), tags = "Link,l=$(2*i-2)", dir = ITensors.In)
+        C_right = combiner(inds(res[i]; :tags => "Link,l=$(2*i)"), tags = "Link,l=$(2*i)", dir = ITensors.Out)
+
+        res[i-1] *= dag(C_left)
+        res[i] = res[i] * C_left * C_right
+        res[i+1] *= dag(C_right)
+
+    end
+
+    for i in 1:length(res)
+        if i == 1
+            swaptags!(res[i], "Link,l=$(2*i)", "Link,l=$(i)")
+        elseif i == length(res)
+            swaptags!(res[i], "Link,l=$(2*i-2)", "Link,l=$(i-1)")
+        else
+            swaptags!(res[i], "Link,l=$(2*i-2)", "Link,l=$(i-1)")
+            swaptags!(res[i], "Link,l=$(2*i)", "Link,l=$(i)")
+        end
+    end
+
+    for i in 1:length(res)
+
+        swaptags!(res[i], "S=1/2,Site,n=$(2*i)", "S=1/2,Site,n=$(i)"; :plev => 0)
+        swaptags!(res[i], "S=1/2,Site,n=$(2*i-1)", "S=1/2,Site,n=$(i)"; :plev => 1)
+
+    end
+
+    return rho_vec_to_mps(res)
+    
+end
