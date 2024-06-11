@@ -77,30 +77,32 @@ def write_dag():
     # Create relevant folders if needed
     if not os.path.exists(f'{path_to_project_number}/Plots'):
         os.makedirs(f'{path_to_project_number}/Plots')
-    if not os.path.exists(f'{path_to_project_number}/HDF5'):
-        os.makedirs(f'{path_to_project_number}/HDF5')        
+    if not os.path.exists(f'{path_to_project_number}/States'):
+        os.makedirs(f'{path_to_project_number}/States')        
     if not os.path.exists(f'{path_to_project_number}/Logs/Error'):
         os.makedirs(f'{path_to_project_number}/Logs/Error')        
     if not os.path.exists(f'{path_to_project_number}/Logs/Output'):
         os.makedirs(f'{path_to_project_number}/Logs/Output')        
     if not os.path.exists(f'{path_to_project_number}/Logs/Log'):
         os.makedirs(f'{path_to_project_number}/Logs/Log')
+    if not os.path.exists(f'{path_to_project_number}/Observables'): # here we will store observables in JLD format
+        os.makedirs(f'{path_to_project_number}/Observables')
             
     # This will form the job id
     counter_of_jobs = 1
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [5] # needs same length as tau list
-    tau_list = [0.01]
-    taylor_expansion_cutoff_1 = 1e-6
-    taylor_expansion_cutoff_2 = 1e-6
+    number_of_time_steps_list = [800, 1600, 3200] # needs same length as tau list
+    tau_list = [0.01, 0.005, 0.0025]
+    taylor_expansion_cutoff_1 = 1e-13
+    taylor_expansion_cutoff_2 = 1e-13
     maxdim = 500
-    how_many_states_to_save = 5
+    how_many_states_to_save = 20
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [4]:
+    for N in [8, 12]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
         for x in [1/(0.36)**2]:
@@ -113,14 +115,14 @@ def write_dag():
                             step = number_of_time_steps // how_many_states_to_save
                             which_steps_to_save_state = np.arange(0, number_of_time_steps+1, step)
                             which_steps_to_save_state[0] = 1
-                            for cutoff in [1e-6]:
+                            for cutoff in [1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13]:
                                 for taylor_expansion_order in [4]:
                                     for l_0_1 in [0]: # this is the constant part of the applied field
                                         for conserve_qns in ["true", "false"]:
                                             for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
                                         
                                                 # Memory, CPU and maximum number of days to run
-                                                mem, cpu, days = 1, 1, 1
+                                                mem, cpu, days = 8, 8, 3
                                                 
                                                 # Job id for the dag job names and path to h5 for results
                                                 job_id = counter_of_jobs
@@ -155,7 +157,7 @@ def write_dag():
                                                 job_name = f'{job_id}'
                                                 f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
                                                 f_dag.write(f'VARS ' + job_name + f' job_id="{job_id}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
-                                                f_dag.write('RETRY ' + job_name + ' 0\n')
+                                                f_dag.write('RETRY ' + job_name + ' 1\n')
         
     # Close the dag file and the h5 input file
     f_dag.close() 

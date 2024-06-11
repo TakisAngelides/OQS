@@ -13,11 +13,11 @@ include("utilities.jl")
 # Input arguments for file and opening the results h5 file
 println("Now getting the input arguments for the file and opening the results h5 file ", now())
 flush(stdout)
-path_to_inputs_h5 = ARGS[1] # Where the h5 file containing the inputs is
+path_to_project_number = ARGS[1] 
+path_to_inputs_h5 = "$(path_to_project_number)/inputs.h5" # Where the h5 file containing the inputs is
 job_id = ARGS[2] # The job id to get the inputs within this h5 file for this specific job
-path_to_save_results_h5 = ARGS[3] # The path to the h5 file to save all results
-results_file = h5open(path_to_save_results_h5, "w")
-write(results_file, "path_to_inputs_h5", path_to_inputs_h5) # This can be used later to get the constants such as N etc
+path_to_results = "$(path_to_project_number)/HDF5/$(job_id).h5" # The path to the h5 file to save all results of states
+results_file = h5open(path_to_results, "w")
 println("Finished getting the input arguments for the file and opening the results h5 file ", now())
 flush(stdout)
 
@@ -40,7 +40,7 @@ flush(stdout)
 # Prepare the initial state
 println("Now getting the initial state ", now())
 flush(stdout)
-function get_initial_state(which_initial_state, conserve_qns, N, results_file, inputs)
+function get_initial_state(which_initial_state, conserve_qns, N, inputs, results_file)
 
     sites_initial_state = siteinds("S=1/2", N, conserve_qns = conserve_qns)
 
@@ -96,7 +96,7 @@ end
 which_initial_state = inputs["wis"]
 conserve_qns = parse(Bool, inputs["cqns"])
 N = inputs["N"]
-mps = get_initial_state(which_initial_state, conserve_qns, N, results_file, inputs)
+mps = get_initial_state(which_initial_state, conserve_qns, N, inputs, results_file)
 println("Finished getting the initial state ", now())
 flush(stdout)
 
@@ -160,8 +160,8 @@ flush(stdout)
 println("Now getting the lists for the tracked observables ", now())
 flush(stdout)
 number_of_time_steps = inputs["nots"]
-z_configs = [[] for _ in 0:number_of_time_steps]
-z_configs[1] = measure_z_config(mps)
+z_configs = zeros(ComplexF64, number_of_time_steps+1, N)
+z_configs[1, :] = measure_z_config(mps)
 println("Finished getting the lists for the tracked observables ", now())
 flush(stdout)
 
@@ -171,6 +171,7 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
     cutoff = inputs["cutoff"]
     maxdim = inputs["md"]
     time_varying_applied_field_flag = parse(Bool, inputs["tvaff"])
+    which_steps_to_save_state = inputs["wstss"]
 
     if time_varying_applied_field_flag
 
@@ -197,20 +198,29 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
             mps = apply(taylor_mpo, mps; cutoff = cutoff, maxdim = maxdim)
             apply_odd!(odd, mps, cutoff, maxdim)
 
-            # Fix positivity and hermiticity
+            # Fix trace
             mps /= trace_mps(mps)
-            mps = get_rho_dagger_rho_purified(mps)
-            truncate!(mps; cutoff = cutoff)
 
             # Compute the tracked observables
-            z_configs[step+1] = measure_z_config(mps)
+            z_configs[step+1, :] = measure_z_config(mps)
+
+            # Save state to file
+            if step in which_steps_to_save_state
+                write(results_file, "$(step)", mps)
+            end
 
             println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps))")
             flush(stdout)
 
         end
 
+        # Write tracked observables to results h5 file
+        println("Now writing the observables to results h5 file ", now())
+        flush(stdout)
+        write(results_file, "z_configs", z_configs)
         write(results_file, "l_0_list", l_0_list)
+        println("Finished writing the observables to results h5 file ", now())
+        flush(stdout)
 
     else
 
@@ -225,30 +235,30 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
             mps = apply(taylor_mpo, mps; cutoff = cutoff, maxdim = maxdim)
             apply_odd!(odd, mps, cutoff, maxdim)
 
-            # Fix positivity and hermiticity
+            # Fix trace
             mps /= trace_mps(mps)
-            mps = get_rho_dagger_rho_purified(mps)
-            truncate!(mps; cutoff = cutoff)
 
             # Compute the tracked observables
-            z_configs[step+1] = measure_z_config(mps)
+            z_configs[step+1, :] = measure_z_config(mps)
+
+            # Save state to file
+            if step in which_steps_to_save_state
+                write(results_file, "$(step)", mps)
+            end
 
             println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps))")
             flush(stdout)
 
         end
 
-    end
+        # Write tracked observables to results h5 file
+        println("Now writing the observables to results h5 file ", now())
+        flush(stdout)
+        write(results_file, "z_configs", z_configs)
+        println("Finished writing the observables to results h5 file ", now())
+        flush(stdout)
 
-    # Write tracked observables to results h5 file
-    println("Now writing the observables to results h5 file ", now())
-    flush(stdout)
-    z_configs_group = create_group(results_file, "z_configs_group")
-    for step in 1:number_of_time_steps+1
-        write_attribute(z_configs_group, "$(step)", z_configs[step])
     end
-    println("Finished writing the observables to results h5 file ", now())
-    flush(stdout)
 
 end
 evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_terms, nn_even_without_l0_terms, results_file, inputs, z_configs, mps)

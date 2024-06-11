@@ -2181,7 +2181,7 @@ function measure_z_config(mps; left = true)
 
 end
 
-function measure_particle_number(mps)
+function measure_particle_number(mps; normalize = false)
 
     n = length(mps)
     N = div(n, 2)
@@ -2197,7 +2197,11 @@ function measure_particle_number(mps)
 
     end
 
-    return 0.5*N + res/trace_mps(mps)
+    if normalize
+        return 0.5*N + res/trace_mps(mps)
+    else
+        return 0.5*N + res
+    end
 
 end
 
