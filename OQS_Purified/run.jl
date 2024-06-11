@@ -162,6 +162,8 @@ flush(stdout)
 number_of_time_steps = inputs["nots"]
 z_configs = zeros(ComplexF64, number_of_time_steps+1, N)
 z_configs[1, :] = measure_z_config(mps)
+link_dims = zeros(Int64, number_of_time_steps+1, N-1)
+link_dims[1, :] = linkdims(mps)
 println("Finished getting the lists for the tracked observables ", now())
 flush(stdout)
 
@@ -203,13 +205,15 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
 
             # Compute the tracked observables
             z_configs[step+1, :] = measure_z_config(mps)
+            linkdims_of_step = linkdims(mps)
+            link_dims[step+1, :] = linkdims_of_step
 
             # Save state to file
             if step in which_steps_to_save_state
                 write(results_file, "$(step)", mps)
             end
 
-            println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps))")
+            println("Step = $(step), Time = $(time() - t), Links = $(linkdims_of_step)")
             flush(stdout)
 
         end
@@ -218,6 +222,7 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
         println("Now writing the observables to results h5 file ", now())
         flush(stdout)
         write(results_file, "z_configs", z_configs)
+        write(results_file, "link_dims", link_dims)
         write(results_file, "l_0_list", l_0_list)
         println("Finished writing the observables to results h5 file ", now())
         flush(stdout)
@@ -240,6 +245,8 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
 
             # Compute the tracked observables
             z_configs[step+1, :] = measure_z_config(mps)
+            linkdims_of_step = linkdims(mps)
+            link_dims[step+1, :] = linkdims_of_step
 
             # Save state to file
             if step in which_steps_to_save_state
@@ -255,6 +262,7 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
         println("Now writing the observables to results h5 file ", now())
         flush(stdout)
         write(results_file, "z_configs", z_configs)
+        write(results_file, "link_dims", link_dims)
         println("Finished writing the observables to results h5 file ", now())
         flush(stdout)
 
