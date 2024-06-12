@@ -162,7 +162,7 @@ flush(stdout)
 number_of_time_steps = inputs["nots"]
 z_configs = zeros(ComplexF64, number_of_time_steps+1, N)
 z_configs[1, :] = measure_z_config(mps)
-link_dims = zeros(Int64, number_of_time_steps+1, N-1)
+link_dims = zeros(Int64, number_of_time_steps+1, 2*N-1)
 link_dims[1, :] = linkdims(mps)
 println("Finished getting the lists for the tracked observables ", now())
 flush(stdout)
