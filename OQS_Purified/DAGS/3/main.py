@@ -92,8 +92,8 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [800, 1600, 3200] # needs same length as tau list
-    tau_list = [0.01, 0.005, 0.0025]
+    number_of_time_steps_list = [800] # needs same length as tau list
+    tau_list = [0.01]
     taylor_expansion_cutoff_1 = 1e-13
     taylor_expansion_cutoff_2 = 1e-13
     maxdim = 500
@@ -101,27 +101,27 @@ def write_dag():
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [8, 12]:
+    for N in [12]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
-        for x in [1/(0.36)**2]:
-            for ma in [0.17]:
-                for aD in [1]:
-                    for aT in [10]:
+        for x in [1/(0.5)**2, 1/(2.0)**2, 1/(0.8)**2]:
+            for ma in [0.0, 1.0, 3.0]:
+                for aD in [0.01, 0.15, 0.3, 3.0]:
+                    for aT in [10, 20, 30]:
                         for tau_idx, tau in enumerate(tau_list):
                             # Below we define a list of the step numbers at which we want to save the state
                             number_of_time_steps = number_of_time_steps_list[tau_idx]
                             step = number_of_time_steps // how_many_states_to_save
                             which_steps_to_save_state = np.arange(0, number_of_time_steps+1, step)
                             which_steps_to_save_state[0] = 1
-                            for cutoff in [1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13]:
+                            for cutoff in [1e-9]:
                                 for taylor_expansion_order in [4]:
                                     for l_0_1 in [0]: # this is the constant part of the applied field
-                                        for conserve_qns in ["true", "false"]:
+                                        for conserve_qns in ["true"]:
                                             for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
                                         
                                                 # Memory, CPU and maximum number of days to run
-                                                mem, cpu, days = 8, 8, 3
+                                                mem, cpu, days = 16, 8, 3
                                                 
                                                 # Job id for the dag job names and path to h5 for results
                                                 job_id = counter_of_jobs
@@ -164,6 +164,9 @@ def write_dag():
     print(f'Total number of jobs in the dag is {counter_of_jobs-1}')                                        
 
 def plot_bond_dimensions():
+    
+    if not os.path.exists(f'{path_to_project_number}/Plots/D'):
+        os.makedirs(f'{path_to_project_number}/Plots/D')
         
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     path_to_inputs = f'{path_to_project_number}/inputs.h5'
@@ -211,6 +214,12 @@ def plot_bond_dimensions():
     print(counter)        
 
 def plot_subtracted_observables():
+    
+    if not os.path.exists(f'{path_to_project_number}/Plots/EF'):
+        os.makedirs(f'{path_to_project_number}/Plots/EF')
+        
+    if not os.path.exists(f'{path_to_project_number}/Plots/PN'):
+        os.makedirs(f'{path_to_project_number}/Plots/PN')
                 
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     
@@ -257,18 +266,18 @@ def plot_subtracted_observables():
                 y = list(np.arange(1, N))
                 z = -ef_configs + ef_configs_without_string
                             
-                # sns.heatmap(z, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y)
-                # num_xticks_to_display = 10
-                # step_size = z.shape[1] // num_xticks_to_display
-                # x_tick_positions = np.arange(0.5, z.shape[1], step_size, dtype = int)
-                # x_tick_labels = x[x_tick_positions]
-                # plt.xticks(x_tick_positions, x_tick_labels)
-                # plt.ylabel('Link')
-                # plt.xlabel(r'$t/a$')
+                sns.heatmap(z, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y)
+                num_xticks_to_display = 10
+                step_size = z.shape[1] // num_xticks_to_display
+                x_tick_positions = np.arange(0.5, z.shape[1], step_size, dtype = int)
+                x_tick_labels = x[x_tick_positions]
+                plt.xticks(x_tick_positions, x_tick_labels)
+                plt.ylabel('Link')
+                plt.xlabel(r'$t/a$')
                 ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
-                # plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
-                # plt.savefig(f'Plots/EF/{file[:-3]}.png')
-                # plt.close()
+                plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+                plt.savefig(f'Plots/EF/{file[:-3]}.png')
+                plt.close()
                 
                 plt.plot(pn - pn[0], label = "string")
                 plt.plot(pn_without_string - pn_without_string[0], label = "no string")

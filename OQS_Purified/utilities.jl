@@ -2859,7 +2859,6 @@ function get_applied_field(which_applied_field, inputs, t_over_a)
 
 end
 
-
 function get_rho_dagger_rho_purified(mps)
 
     """

@@ -92,71 +92,75 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [800, 1600, 3200] # needs same length as tau list
-    tau_list = [0.01, 0.005, 0.0025]
+    number_of_time_steps_list = [700] # needs same length as tau list
+    x_list = [1/(0.5)**2]
+    ma_list = [0.0]
+    tau_list = [0.01]
     taylor_expansion_cutoff_1 = 1e-13
     taylor_expansion_cutoff_2 = 1e-13
     maxdim = 500
-    how_many_states_to_save = 20
+    how_many_states_to_save = 0
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [8, 12]:
+    for N in [12]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
-        for x in [1/(0.36)**2]:
-            for ma in [0.17]:
-                for aD in [1]:
-                    for aT in [10]:
-                        for tau_idx, tau in enumerate(tau_list):
-                            # Below we define a list of the step numbers at which we want to save the state
-                            number_of_time_steps = number_of_time_steps_list[tau_idx]
-                            step = number_of_time_steps // how_many_states_to_save
-                            which_steps_to_save_state = np.arange(0, number_of_time_steps+1, step)
-                            which_steps_to_save_state[0] = 1
-                            for cutoff in [1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13]:
-                                for taylor_expansion_order in [4]:
-                                    for l_0_1 in [0]: # this is the constant part of the applied field
-                                        for conserve_qns in ["true", "false"]:
-                                            for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
+        for aD in [0.01, 0.15, 0.3, 0.5, 1.0, 3.0]:
+            for aT in [10, 30, 50, 70, 90]:
+                for tau_idx, tau in enumerate(tau_list):
+                    x, ma = x_list[tau_idx], ma_list[tau_idx]
+                    # Below we define a list of the step numbers at which we want to save the state
+                    number_of_time_steps = number_of_time_steps_list[tau_idx]
+                    if how_many_states_to_save == 0:
+                        which_steps_to_save_state = []
+                    else:
+                        step = number_of_time_steps // how_many_states_to_save
+                        which_steps_to_save_state = np.arange(0, number_of_time_steps+1, step)
+                        which_steps_to_save_state[0] = 1
+                    for cutoff in [1e-9]:
+                        for taylor_expansion_order in [4]:
+                            for l_0_1 in [0]: # this is the constant part of the applied field
+                                for conserve_qns in ["true"]:
+                                    for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
+                                
+                                        # Memory, CPU and maximum number of days to run
+                                        mem, cpu, days = 8, 8, 6.99
                                         
-                                                # Memory, CPU and maximum number of days to run
-                                                mem, cpu, days = 8, 8, 3
-                                                
-                                                # Job id for the dag job names and path to h5 for results
-                                                job_id = counter_of_jobs
-                                                counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
-                                                                                            
-                                                # Write inputs to h5
-                                                g = f_h5.create_group(f'{job_id}')       
-                                                g.attrs["N"] = N
-                                                g.attrs["x"] = x
-                                                g.attrs["ma"] = ma
-                                                g.attrs["lambda"] = lambd
-                                                g.attrs["aT"] = aT
-                                                g.attrs["aD"] = aD
-                                                g.attrs["cqns"] = conserve_qns
-                                                g.attrs["ds"] = dissipator_sites
-                                                g.attrs["tau"] = tau
-                                                g.attrs["nots"] = number_of_time_steps
-                                                g.attrs["tvaff"] = time_varying_applied_field_flag
-                                                g.attrs["tec_1"] = taylor_expansion_cutoff_1
-                                                g.attrs["tec_2"] = taylor_expansion_cutoff_2
-                                                g.attrs["cutoff"] = cutoff
-                                                g.attrs["md"] = maxdim
-                                                g.attrs["teo"] = taylor_expansion_order
-                                                g.attrs["l_0_1"] = l_0_1
-                                                g.attrs["waf"] = which_applied_field
-                                                g.attrs["env_corr_type"] = env_corr_type
-                                                g.attrs["wis"] = which_initial_state
-                                                g.attrs["fs"] = flip_sites
-                                                g.attrs["wstss"] = which_steps_to_save_state
-                    
-                                                # Write job to dag
-                                                job_name = f'{job_id}'
-                                                f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
-                                                f_dag.write(f'VARS ' + job_name + f' job_id="{job_id}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
-                                                f_dag.write('RETRY ' + job_name + ' 1\n')
+                                        # Job id for the dag job names and path to h5 for results
+                                        job_id = counter_of_jobs
+                                        counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
+                                                                                    
+                                        # Write inputs to h5
+                                        g = f_h5.create_group(f'{job_id}')       
+                                        g.attrs["N"] = N
+                                        g.attrs["x"] = x
+                                        g.attrs["ma"] = ma
+                                        g.attrs["lambda"] = lambd
+                                        g.attrs["aT"] = aT
+                                        g.attrs["aD"] = aD
+                                        g.attrs["cqns"] = conserve_qns
+                                        g.attrs["ds"] = dissipator_sites
+                                        g.attrs["tau"] = tau
+                                        g.attrs["nots"] = number_of_time_steps
+                                        g.attrs["tvaff"] = time_varying_applied_field_flag
+                                        g.attrs["tec_1"] = taylor_expansion_cutoff_1
+                                        g.attrs["tec_2"] = taylor_expansion_cutoff_2
+                                        g.attrs["cutoff"] = cutoff
+                                        g.attrs["md"] = maxdim
+                                        g.attrs["teo"] = taylor_expansion_order
+                                        g.attrs["l_0_1"] = l_0_1
+                                        g.attrs["waf"] = which_applied_field
+                                        g.attrs["env_corr_type"] = env_corr_type
+                                        g.attrs["wis"] = which_initial_state
+                                        g.attrs["fs"] = flip_sites
+                                        g.attrs["wstss"] = which_steps_to_save_state
+            
+                                        # Write job to dag
+                                        job_name = f'{job_id}'
+                                        f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
+                                        f_dag.write(f'VARS ' + job_name + f' job_id="{job_id}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
+                                        f_dag.write('RETRY ' + job_name + ' 1\n')
         
     # Close the dag file and the h5 input file
     f_dag.close() 
@@ -164,6 +168,9 @@ def write_dag():
     print(f'Total number of jobs in the dag is {counter_of_jobs-1}')                                        
 
 def plot_bond_dimensions():
+    
+    if not os.path.exists(f'{path_to_project_number}/Plots/D'):
+        os.makedirs(f'{path_to_project_number}/Plots/D')
         
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     path_to_inputs = f'{path_to_project_number}/inputs.h5'
@@ -211,6 +218,12 @@ def plot_bond_dimensions():
     print(counter)        
 
 def plot_subtracted_observables():
+    
+    if not os.path.exists(f'{path_to_project_number}/Plots/EF'):
+        os.makedirs(f'{path_to_project_number}/Plots/EF')
+        
+    if not os.path.exists(f'{path_to_project_number}/Plots/PN'):
+        os.makedirs(f'{path_to_project_number}/Plots/PN')
                 
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     
@@ -257,18 +270,18 @@ def plot_subtracted_observables():
                 y = list(np.arange(1, N))
                 z = -ef_configs + ef_configs_without_string
                             
-                # sns.heatmap(z, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y)
-                # num_xticks_to_display = 10
-                # step_size = z.shape[1] // num_xticks_to_display
-                # x_tick_positions = np.arange(0.5, z.shape[1], step_size, dtype = int)
-                # x_tick_labels = x[x_tick_positions]
-                # plt.xticks(x_tick_positions, x_tick_labels)
-                # plt.ylabel('Link')
-                # plt.xlabel(r'$t/a$')
+                sns.heatmap(z, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y)
+                num_xticks_to_display = 10
+                step_size = z.shape[1] // num_xticks_to_display
+                x_tick_positions = np.arange(0.5, z.shape[1], step_size, dtype = int)
+                x_tick_labels = x[x_tick_positions]
+                plt.xticks(x_tick_positions, x_tick_labels)
+                plt.ylabel('Link')
+                plt.xlabel(r'$t/a$')
                 ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
-                # plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
-                # plt.savefig(f'Plots/EF/{file[:-3]}.png')
-                # plt.close()
+                plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+                plt.savefig(f'Plots/EF/{file[:-3]}.png')
+                plt.close()
                 
                 plt.plot(pn - pn[0], label = "string")
                 plt.plot(pn_without_string - pn_without_string[0], label = "no string")
@@ -287,7 +300,7 @@ def plot_subtracted_observables():
             
 # write_dag()
 
-# plot_bond_dimensions()
+plot_bond_dimensions()
 
 plot_subtracted_observables()
 
