@@ -174,6 +174,7 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
     maxdim = inputs["md"]
     time_varying_applied_field_flag = parse(Bool, inputs["tvaff"])
     which_steps_to_save_state = inputs["wstss"]
+    mem = inputs["mem"]
 
     if time_varying_applied_field_flag
 
@@ -213,7 +214,13 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
                 write(results_file, "$(step)", mps)
             end
 
-            println("Step = $(step), Time = $(time() - t), Links = $(linkdims_of_step)")
+            total_mem_tmp = (Base.gc_live_bytes()/2^20)/10^3
+            if total_mem_tmp >= mem
+                println("GC Cleaning")
+                flush(stdout)
+                GC.gc(true)
+            end
+            println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps)), Mem = $(total_mem_tmp)")
             flush(stdout)
 
         end
@@ -253,7 +260,13 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
                 write(results_file, "$(step)", mps)
             end
 
-            println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps))")
+            total_mem_tmp = (Base.gc_live_bytes()/2^20)/10^3
+            if total_mem_tmp >= 0.5*mem
+                println("GC Cleaning")
+                flush(stdout)
+                GC.gc(true)
+            end
+            println("Step = $(step), Time = $(time() - t), Links = $(linkdims(mps)), Mem = $(total_mem_tmp)")
             flush(stdout)
 
         end
