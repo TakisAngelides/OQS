@@ -2919,3 +2919,32 @@ function get_rho_dagger_rho_purified(mps)
     return rho_vec_to_mps(res)
     
 end
+
+function mpo_from_purified_mps(mps)
+
+    N = length(mps)
+    for i in 1:2:N
+        prime!(mps[i]; :tags => "Site")
+    end
+    half_mps = MPS(div(N, 2))
+    for i in 1:2:N
+        half_mps[div(i, 2) + 1] = mps[i]*mps[i+1]
+    end
+    for i in 1:length(half_mps)
+        if i == 1
+            swaptags!(half_mps[i], "Link,l=$(2*i)", "Link,l=$(i)")
+        elseif i == length(half_mps)
+            swaptags!(half_mps[i], "Link,l=$(2*i-2)", "Link,l=$(i-1)")
+        else
+            swaptags!(half_mps[i], "Link,l=$(2*i-2)", "Link,l=$(i-1)")
+            swaptags!(half_mps[i], "Link,l=$(2*i)", "Link,l=$(i)")
+        end
+    end
+    for i in 1:length(half_mps)
+        swaptags!(half_mps[i], "S=1/2,Site,n=$(2*i)", "S=1/2,Site,n=$(i)"; :plev => 0)
+        swaptags!(half_mps[i], "S=1/2,Site,n=$(2*i-1)", "S=1/2,Site,n=$(i)"; :plev => 1)
+    end
+    mpo = convert(MPO, half_mps)
+    return mpo
+
+end
