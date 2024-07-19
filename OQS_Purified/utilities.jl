@@ -1765,6 +1765,18 @@ function get_particle_number_operator_sparse_old(N, x)
 
 end
 
+function get_z_config_from_zeroq_density_matrix(N, rho)
+
+    res = []
+    for i in 1:N
+        op = project_zeroq(get_op(["Z"], [i], N))
+        push!(res, real(tr(rho*op)))
+    end
+
+    return res
+
+end
+
 function get_charge_config_from_zeroq_density_matrix(N, rho)
 
     res = []
@@ -1869,6 +1881,26 @@ end
 function get_dirac_vacuum_zeroq_density_matrix_sparse(N)
 
     state = join([isodd(n) ? "0" : "1" for n = 1:N])
+    decimal_number = parse(Int, state, base=2) + 1
+    rho = zeros(2^N, 2^N)
+    rho[decimal_number, decimal_number] = 1 
+    return project_zeroq(rho)
+
+end
+
+function get_dirac_vacuum_with_string_zeroq_density_matrix_sparse(N, q_sites)
+
+    state = [isodd(n) ? "0" : "1" for n = 1:N]
+    for i in 1:N
+        if i in q_sites
+            if isodd(i)
+                state[i] = "1"
+            else
+                state[i] = "0"
+            end
+        end
+    end
+    state = join(state)
     decimal_number = parse(Int, state, base=2) + 1
     rho = zeros(2^N, 2^N)
     rho[decimal_number, decimal_number] = 1 
