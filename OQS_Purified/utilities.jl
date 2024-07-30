@@ -573,6 +573,21 @@ function ispositive(mpo; tol = 1e-14)
 
 end
 
+function lowest_eval_mpo(mpo; tol = 1e-9)
+
+    n = length(mpo)
+    dmrg_tol = tol
+    cutoff = tol
+    sites = dag(reduce(vcat, siteinds(mpo; :plev => 0)))
+    state = [isodd(i) ? "0" : "1" for i = 1:n]
+    psi0 = randomMPS(sites, state)
+    nsweeps = 100
+    dmrg_energy, _ = dmrg(mpo, psi0; nsweeps, cutoff, outputlevel=1, ishermitian = false)
+
+    return dmrg_energy
+
+end
+
 function mpo_to_matrix(mpo)
 
     n = length(mpo)
@@ -2953,6 +2968,8 @@ function get_rho_dagger_rho_purified(mps)
 end
 
 function mpo_from_purified_mps(mps)
+
+    mps = deepcopy(mps)
 
     N = length(mps)
     for i in 1:2:N
