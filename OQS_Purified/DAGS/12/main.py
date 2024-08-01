@@ -92,21 +92,21 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [2000] # needs same length as tau list
+    number_of_time_steps_list = [800] # needs same length as tau list
     tau_list = [0.01]*len(number_of_time_steps_list)
     aD_list = [0.01]
     x_list = [1/(0.5)**2]
     ma_list = [0.0]
-    taylor_expansion_cutoff_1 = 1e-6
-    taylor_expansion_cutoff_2 = 1e-6
-    maxdim = 200
+    taylor_expansion_cutoff_1 = 1e-7
+    taylor_expansion_cutoff_2 = 1e-7
+    maxdim = 400
     how_many_states_to_save = 0
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [12]:
+    for N in [20]:
         dissipator_sites = [i for i in range(1, N+1)]
-        flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
+        flip_sites = [N//2-3, N//2 + 4] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
         for aT in [10]:
             for x in x_list:
                 for ma in ma_list:
@@ -120,7 +120,7 @@ def write_dag():
                             step = number_of_time_steps // how_many_states_to_save
                             which_steps_to_save_state = np.arange(0, number_of_time_steps+1, step)
                             which_steps_to_save_state[0] = 1
-                        for cutoff in [1e-6]:
+                        for cutoff in [1e-7]:
                             for taylor_expansion_order in [2]:
                                 for l_0_1 in [0]: # this is the constant part of the applied field
                                     for conserve_qns in ["true"]:

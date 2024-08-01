@@ -92,78 +92,78 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [2000] # needs same length as tau list
-    tau_list = [0.01]*len(number_of_time_steps_list)
-    aD_list = [0.01]
-    x_list = [1/(0.5)**2]
-    ma_list = [0.0]
-    taylor_expansion_cutoff_1 = 1e-6
-    taylor_expansion_cutoff_2 = 1e-6
-    maxdim = 200
-    how_many_states_to_save = 0
+    number_of_time_steps_list = [1000] # needs same length as tau list
+    tau_list = [0.05]*len(number_of_time_steps_list)
+    aD_list = [0.5, 1.0, 3.0]
+    x_list = [1]
+    ma_list = [0.0, 1.0]
+    taylor_expansion_cutoff_1 = 1e-11
+    taylor_expansion_cutoff_2 = 1e-11
+    maxdim = 300
+    how_many_states_to_save = 10
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [12]:
+    for N in [8, 12]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
         for aT in [10]:
             for x in x_list:
                 for ma in ma_list:
-                    for tau_idx, tau in enumerate(tau_list):
-                        aD = aD_list[tau_idx]
-                        # Below we define a list of the step numbers at which we want to save the state
-                        number_of_time_steps = number_of_time_steps_list[tau_idx]
-                        if how_many_states_to_save == 0:
-                            which_steps_to_save_state = []
-                        else:
-                            step = number_of_time_steps // how_many_states_to_save
-                            which_steps_to_save_state = np.arange(0, number_of_time_steps+1, step)
-                            which_steps_to_save_state[0] = 1
-                        for cutoff in [1e-6]:
-                            for taylor_expansion_order in [2]:
-                                for l_0_1 in [0]: # this is the constant part of the applied field
-                                    for conserve_qns in ["true"]:
-                                        for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
-                                    
-                                            # Memory, CPU and maximum number of days to run
-                                            mem, cpu, days = 32, 8, 6.99
-                                            
-                                            # Job id for the dag job names and path to h5 for results
-                                            job_id = counter_of_jobs
-                                            counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
-                                                                                        
-                                            # Write inputs to h5
-                                            g = f_h5.create_group(f'{job_id}')       
-                                            g.attrs["N"] = N
-                                            g.attrs["x"] = x
-                                            g.attrs["ma"] = ma
-                                            g.attrs["lambda"] = lambd
-                                            g.attrs["aT"] = aT
-                                            g.attrs["aD"] = aD
-                                            g.attrs["cqns"] = conserve_qns
-                                            g.attrs["ds"] = dissipator_sites
-                                            g.attrs["tau"] = tau
-                                            g.attrs["nots"] = number_of_time_steps
-                                            g.attrs["tvaff"] = time_varying_applied_field_flag
-                                            g.attrs["tec_1"] = taylor_expansion_cutoff_1
-                                            g.attrs["tec_2"] = taylor_expansion_cutoff_2
-                                            g.attrs["cutoff"] = cutoff
-                                            g.attrs["md"] = maxdim
-                                            g.attrs["teo"] = taylor_expansion_order
-                                            g.attrs["l_0_1"] = l_0_1
-                                            g.attrs["waf"] = which_applied_field
-                                            g.attrs["env_corr_type"] = env_corr_type
-                                            g.attrs["wis"] = which_initial_state
-                                            g.attrs["fs"] = flip_sites
-                                            g.attrs["wstss"] = which_steps_to_save_state
-                                            g.attrs["mem"] = mem
-                
-                                            # Write job to dag
-                                            job_name = f'{job_id}'
-                                            f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
-                                            f_dag.write(f'VARS ' + job_name + f' job_id="{job_id}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
-                                            f_dag.write('RETRY ' + job_name + ' 1\n')
+                    for aD in aD_list:
+                        for tau_idx, tau in enumerate(tau_list):
+                            # Below we define a list of the step numbers at which we want to save the state
+                            number_of_time_steps = number_of_time_steps_list[tau_idx]
+                            if how_many_states_to_save == 0:
+                                which_steps_to_save_state = []
+                            else:
+                                step = number_of_time_steps // how_many_states_to_save
+                                which_steps_to_save_state = np.arange(0, number_of_time_steps+1, step)
+                                which_steps_to_save_state[0] = 1
+                            for cutoff in [1e-9, 1e-11]:
+                                for taylor_expansion_order in [2]:
+                                    for l_0_1 in [0.0, 0.5, 0.9, -0.5, -0.9]: # this is the constant part of the applied field
+                                        for conserve_qns in ["true"]:
+                                            for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
+                                        
+                                                # Memory, CPU and maximum number of days to run
+                                                mem, cpu, days = 32, 16, 6.99
+                                                
+                                                # Job id for the dag job names and path to h5 for results
+                                                job_id = counter_of_jobs
+                                                counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
+                                                                                            
+                                                # Write inputs to h5
+                                                g = f_h5.create_group(f'{job_id}')       
+                                                g.attrs["N"] = N
+                                                g.attrs["x"] = x
+                                                g.attrs["ma"] = ma
+                                                g.attrs["lambda"] = lambd
+                                                g.attrs["aT"] = aT
+                                                g.attrs["aD"] = aD
+                                                g.attrs["cqns"] = conserve_qns
+                                                g.attrs["ds"] = dissipator_sites
+                                                g.attrs["tau"] = tau
+                                                g.attrs["nots"] = number_of_time_steps
+                                                g.attrs["tvaff"] = time_varying_applied_field_flag
+                                                g.attrs["tec_1"] = taylor_expansion_cutoff_1
+                                                g.attrs["tec_2"] = taylor_expansion_cutoff_2
+                                                g.attrs["cutoff"] = cutoff
+                                                g.attrs["md"] = maxdim
+                                                g.attrs["teo"] = taylor_expansion_order
+                                                g.attrs["l_0_1"] = l_0_1
+                                                g.attrs["waf"] = which_applied_field
+                                                g.attrs["env_corr_type"] = env_corr_type
+                                                g.attrs["wis"] = which_initial_state
+                                                g.attrs["fs"] = flip_sites
+                                                g.attrs["wstss"] = which_steps_to_save_state
+                                                g.attrs["mem"] = mem
+                    
+                                                # Write job to dag
+                                                job_name = f'{job_id}'
+                                                f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
+                                                f_dag.write(f'VARS ' + job_name + f' job_id="{job_id}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
+                                                f_dag.write('RETRY ' + job_name + ' 1\n')
         
     # Close the dag file and the h5 input file
     f_dag.close() 
@@ -276,9 +276,9 @@ def plot_subtracted_observables():
                 x = np.round(t_over_a_list, decimals = 3)
                 y = list(np.arange(1, N))
                 
-                if (file[:-3] == "2"):
-                    x = x[:z.shape[1]//2 - 0]
-                    z = z[:, :z.shape[1]//2 - 0]
+                # if (file[:-3] == "2") or (file[:-3] == "4"):
+                #     x = x[:z.shape[1]//2 - 200]
+                #     z = z[:, :z.shape[1]//2 - 200]
                   
                 sns.heatmap(z, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y)
                 num_xticks_to_display = 10
@@ -298,9 +298,9 @@ def plot_subtracted_observables():
                 x = np.round(t_over_a_list, decimals = 3)
                 y = list(np.arange(1, N))
                 
-                if (file[:-3] == "2"):
-                    x = x[:z.shape[1]//2 - 0]
-                    z = z[:, :z.shape[1]//2 - 0]
+                # if (file[:-3] == "2") or (file[:-3] == "4"):
+                #     x = x[:z.shape[1]//2 - 200]
+                #     z = z[:, :z.shape[1]//2 - 200]
                             
                 sns.heatmap(z, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y)
                 num_xticks_to_display = 10
@@ -315,15 +315,17 @@ def plot_subtracted_observables():
                 plt.savefig(f'Plots/Q/{file[:-3]}.png')
                 plt.close()
                 
-                if (file[:-3] == "2"):
-                    pn = pn[:len(x)]
-                    pn_without_string = pn_without_string[:len(x)]
+                # if (file[:-3] == "2") or (file[:-3] == "4"):
+                #     pn = pn[:len(x)]
+                #     pn_without_string = pn_without_string[:len(x)]
                 
                 plt.plot(x, pn - pn[0], label = "string")
                 plt.plot(x, pn_without_string - pn_without_string[0], label = "no string")
-                plt.plot(x, -pn + pn_without_string + pn[0], label = "subtracted")
+                plt.plot(x, -pn + pn_without_string + pn[0] - pn_without_string[0], label = f"subtracted, max = {max(-pn + pn_without_string + pn[0] - pn_without_string[0])}")
                 plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
                 plt.legend()
+                plt.ylabel('Particle number')
+                plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/PN/{file[:-3]}.png')
                 plt.close()
                             
@@ -337,7 +339,7 @@ def plot_subtracted_observables():
             
 # write_dag()
 
-plot_bond_dimensions()
+# plot_bond_dimensions()
 
 plot_subtracted_observables()
 

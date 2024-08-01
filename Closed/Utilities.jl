@@ -329,7 +329,7 @@ function get_which_canonical_form(mps)
 
 end
 
-function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 0)
+function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 0, maxdim = 1000)
 
     N = length(mps)
 
@@ -341,7 +341,7 @@ function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 0)
 
         # println("In odd, for idx = $idx, ", get_which_canonical_form(mps))
         
-        U, S, V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+        U, S, V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = maxdim)
         
         mps[idx] = U
 
@@ -356,7 +356,7 @@ function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 0)
         
             tmp = mps[idx]*mps[idx+1]
         
-            U,S,V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+            U,S,V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = maxdim)
         
             mps[idx] = U
 
@@ -369,7 +369,7 @@ function apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = 0)
 
 end
 
-function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 0)
+function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 0, maxdim = 1000)
 
     """
     After we apply 1-tau*Hz/2 with the apply function we end up with right canonical form.
@@ -379,7 +379,7 @@ function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 0)
     N = length(mps)
 
     # mps[1], mps[2] = ITensors.qr(mps[1]*mps[2], uniqueinds(mps[1], mps[2]); positive = true, tags = "Link,l=$(1)")
-    mps[1], S, V = ITensors.svd(mps[1]*mps[2], uniqueinds(mps[1], mps[2]), lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)"; cutoff = cutoff)
+    mps[1], S, V = ITensors.svd(mps[1]*mps[2], uniqueinds(mps[1], mps[2]), lefttags = "Link,l=$(1)", righttags = "Link,l=$(1)"; cutoff = cutoff, maxdim = maxdim)
     mps[2] = S*V
 
     for (idx_num, idx) in enumerate(2:2:N-2)
@@ -390,7 +390,7 @@ function apply_He_mpo_list!(He_mpo_list, mps; cutoff = 0)
 
         # println("In even, for idx = $idx, ", get_which_canonical_form(mps))
         
-        U, S, V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff)
+        U, S, V = ITensors.svd(tmp, uniqueinds(mps[idx], mps[idx+1]), lefttags = "Link,l=$(idx)", righttags = "Link,l=$(idx)", cutoff = cutoff, maxdim = maxdim)
         
         mps[idx] = U
 

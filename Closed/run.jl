@@ -141,21 +141,21 @@ function evolve(which_applied_field, Ho_mpo_list, He_mpo_list, Ho_mpo_list_2, ta
 
             # One time step with ATDDMRG
             if step == 1
-                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
+                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
             elseif step == number_of_time_steps
-                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)    
+                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)    
             else
-                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
+                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
             end
 
             # Compute the tracked observables
@@ -190,21 +190,21 @@ function evolve(which_applied_field, Ho_mpo_list, He_mpo_list, Ho_mpo_list_2, ta
     
             # One time step with ATDDMRG
             if step == 1
-                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
+                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
             elseif step == number_of_time_steps
-                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff)    
+                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_Ho_mpo_list!(Ho_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)    
             else
-                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
-                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff)
-                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true)
+                apply_Ho_mpo_list!(Ho_mpo_list_2, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
+                apply_He_mpo_list!(He_mpo_list, mps; cutoff = cutoff, maxdim = maxdim)
+                mps = apply(taylor_mpo, mps; cutoff = cutoff, normalize = true, maxdim = maxdim)
             end
 
             # Compute the tracked observables

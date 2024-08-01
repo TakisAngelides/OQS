@@ -335,10 +335,10 @@ def plot_subtracted_observables():
             
             print(file)
             
-write_dag()
+# write_dag()
 
-# plot_bond_dimensions()
+plot_bond_dimensions()
 
-# plot_subtracted_observables()
+plot_subtracted_observables()
 
 

@@ -233,6 +233,9 @@ def plot_subtracted_observables():
         
     if not os.path.exists(f'{path_to_project_number}/Plots/Q'):
         os.makedirs(f'{path_to_project_number}/Plots/Q')
+        
+    if not os.path.exists(f'{path_to_project_number}/Plots/PNPS'):
+        os.makedirs(f'{path_to_project_number}/Plots/PNPS')
                 
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     
@@ -272,6 +275,26 @@ def plot_subtracted_observables():
                 ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
                 pn_without_string = np.array([0.5*N + 0.5*sum(np.real(z_configs_without_string[:, i]) * staggering) for i in range(z_configs_without_string.shape[1])])
                 f.close()
+                
+                pnps1 = np.array([0.5 + 0.5*(np.real(z_configs_without_string[:, i])*staggering) for i in range(z_configs_without_string.shape[1])])
+                pnps2 = np.array([0.5 + 0.5*(np.real(z_configs[:, i])*staggering) for i in range(z_configs.shape[1])])
+                pnps = pnps2 - pnps1
+                t_over_a_list = [0] + list(tau*(np.arange(1, pnps2.shape[1])))
+                x = np.round(t_over_a_list, decimals = 3)
+                y = list(np.arange(1, N))
+                            
+                sns.heatmap(np.transpose(pnps), cmap = 'jet', yticklabels = y)
+                num_xticks_to_display = 10
+                step_size = pnps.shape[1] // num_xticks_to_display
+                x_tick_positions = np.arange(0.5, pnps.shape[1], step_size, dtype = int)
+                x_tick_labels = x[x_tick_positions]
+                plt.xticks(x_tick_positions, x_tick_labels)
+                plt.ylabel('Site')
+                plt.xlabel(r'$t/a$')
+                ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
+                plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+                plt.savefig(f'Plots/PNPS/{file[:-3]}.png', dpi = 500)
+                plt.close()
                 
                 z = -ef_configs + ef_configs_without_string
                 t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1])))
@@ -409,6 +432,6 @@ def exploring_thermalization():
 
 # plot_bond_dimensions()
 
-# plot_subtracted_observables()
+plot_subtracted_observables()
 
-exploring_thermalization()
+# exploring_thermalization()
