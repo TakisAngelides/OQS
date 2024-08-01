@@ -2772,6 +2772,24 @@ function purified_density_matrix_from_mps_to_matrix(mps)
 
 end
 
+function get_Lindblad_opsum_without_l0_terms(sites, x, ma, lambda, aT, aD, env_corr_type, inputs, dissipator_sites)
+
+    N = div(length(sites), 2)
+    res = -1im*get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, "left")
+    res += 1im*get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, "right")
+    
+    if aD != 0
+        for n in dissipator_sites
+            for m in dissipator_sites
+                res += environment_correlator(env_corr_type, n, m, aD, inputs) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
+            end
+        end
+    end
+
+    return res
+
+end
+
 function get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, side)
 
     """
@@ -2821,24 +2839,6 @@ function get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, side)
     end
 
     return opsum
-
-end
-
-function get_Lindblad_opsum_without_l0_terms(sites, x, ma, lambda, aT, aD, env_corr_type, inputs, dissipator_sites)
-
-    N = div(length(sites), 2)
-    res = -1im*get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, "left")
-    res += 1im*get_double_aH_Hamiltonian_without_l0_terms(sites, x, ma, lambda, "right")
-    
-    if aD != 0
-        for n in dissipator_sites
-            for m in dissipator_sites
-                res += environment_correlator(env_corr_type, n, m, aD, inputs) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
-            end
-        end
-    end
-
-    return res
 
 end
 
@@ -2995,5 +2995,56 @@ function mpo_from_purified_mps(mps)
     end
     mpo = convert(MPO, half_mps)
     return mpo
+
+end
+
+function measure_mpo(mps, mpo)
+
+    sites = siteinds(mps)
+    l = length(mps)
+
+    mps = apply(mpo, mps)
+
+    i = 1
+    left, right = 2*i-1, 2*i
+    res = mps[left]*mps[right]*dag(delta(sites[left], sites[right]))
+
+    for i in 2:div(l,2)
+        left, right = 2*i-1, 2*i
+        res *= mps[left]*mps[right]*dag(delta(sites[left], sites[right]))
+    end
+
+    return res[1]
+
+end
+
+function get_double_aH_Hamiltonian_only_kinetic_term(sites, side)
+
+    """
+    This gives aH Hamiltonian
+
+    side specifies "left" or "right" to imply H tensor product I or vice versa
+
+    """
+
+    N = div(length(sites), 2)
+
+    opsum = OpSum()
+    
+    for n in 1:N-1
+
+        if side == "left"
+            n_idx = 2*n-1
+        else
+            n_idx = 2*n 
+        end
+
+        # Kinetic term
+        opsum += 0.5,"S+",n_idx,"S-",n_idx+2
+        opsum += 0.5,"S-",n_idx,"S+",n_idx+2
+
+    end
+
+    return opsum
 
 end
