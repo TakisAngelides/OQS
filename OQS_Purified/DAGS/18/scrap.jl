@@ -120,7 +120,7 @@ for file_name in readdir("/lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DA
             plot!(steps_energy1, real(energy1), label = "With string")
             plot!(steps_energy2, real(energy2), label = "No string")
             title!("aD = $(aD), l_0 = $(l_0_1)")
-            display(p)
+            savefig("/lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/18/plots_specific_states/$(file_name).png")
 
         end
 

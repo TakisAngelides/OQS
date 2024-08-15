@@ -92,11 +92,11 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [2000] # needs same length as tau list
+    number_of_time_steps_list = [500] # needs same length as tau list
     tau_list = [0.05]*len(number_of_time_steps_list)
-    aD_list = [0.5, 1.0, 3.0, 5.0]
-    x_list = [1, 4]
-    ma_list = [0.0, 0.5, 1.0]
+    aD_list = [0.1, 0.5, 1.0]
+    x_list = [1]
+    ma_list = [0.0, 1.0]
     taylor_expansion_cutoff_1 = 1e-9
     taylor_expansion_cutoff_2 = 1e-9
     maxdim = 300
@@ -104,9 +104,9 @@ def write_dag():
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [12]:
+    for N in [6, 8, 10, 12]:
         dissipator_sites = [i for i in range(1, N+1)]
-        flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
+        flip_sites = [N//2, N//2 + 1] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
         for aT in [10]:
             for x in x_list:
                 for ma in ma_list:
@@ -122,12 +122,12 @@ def write_dag():
                                 which_steps_to_save_state[0] = 1
                             for cutoff in [1e-9]:
                                 for taylor_expansion_order in [2]:
-                                    for l_0_1 in [-0.99, -0.8, -0.5, 0.2, 0.0, 0.2, 0.5, 0.8, 0.99]: # this is the constant part of the applied field
+                                    for l_0_1 in [-5.0, -3.0, -2.5, -1.5, -1.25, -0.99, -0.8, -0.5, -0.2, 0.0, 0.2, 0.5, 0.8, 0.99, 1.25, 1.5, 2.5, 3.0, 5.0]: # this is the constant part of the applied field
                                         for conserve_qns in ["true"]:
                                             for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
                                         
                                                 # Memory, CPU and maximum number of days to run
-                                                mem, cpu, days = 32, 16, 6.99
+                                                mem, cpu, days = 16, 8, 6.99
                                                 
                                                 # Job id for the dag job names and path to h5 for results
                                                 job_id = counter_of_jobs
@@ -226,14 +226,17 @@ def plot_subtracted_observables():
     if not os.path.exists(f'{path_to_project_number}/Plots/EF'):
         os.makedirs(f'{path_to_project_number}/Plots/EF')
         
+    if not os.path.exists(f'{path_to_project_number}/Plots/EF_Middle'):
+        os.makedirs(f'{path_to_project_number}/Plots/EF_Middle')
+        
     if not os.path.exists(f'{path_to_project_number}/Plots/PN'):
         os.makedirs(f'{path_to_project_number}/Plots/PN')
         
     if not os.path.exists(f'{path_to_project_number}/Plots/Q'):
         os.makedirs(f'{path_to_project_number}/Plots/Q')
         
-    if not os.path.exists(f'{path_to_project_number}/Plots/Z'):
-        os.makedirs(f'{path_to_project_number}/Plots/Z')
+    if not os.path.exists(f'{path_to_project_number}/Plots/E'):
+        os.makedirs(f'{path_to_project_number}/Plots/E')
                 
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     
@@ -256,6 +259,7 @@ def plot_subtracted_observables():
                 staggering = np.array([(-1)**n for n in range(N)])
                 f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
                 z_configs = np.asarray(f['z_configs'])
+                energy = np.asarray(f['energy'])
                 q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
                 ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
                 pn = np.array([0.5*N + 0.5*sum(np.real(z_configs[:, i]) * staggering) for i in range(z_configs.shape[1])])
@@ -269,6 +273,7 @@ def plot_subtracted_observables():
                 staggering = np.array([(-1)**n for n in range(N)])
                 f = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
                 z_configs_without_string = np.asarray(f['z_configs'])
+                energy_without_string = np.asarray(f['energy'])
                 q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
                 ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
                 pn_without_string = np.array([0.5*N + 0.5*sum(np.real(z_configs_without_string[:, i]) * staggering) for i in range(z_configs_without_string.shape[1])])
@@ -279,15 +284,9 @@ def plot_subtracted_observables():
                 x = np.round(t_over_a_list, decimals = 3)
                 y = list(np.arange(1, N))
                 
-                # if (file[:-3] == "2") or (file[:-3] == "4"):
-                #     x = x[:z.shape[1]//2 - 200]
-                #     z = z[:, :z.shape[1]//2 - 200]
-                
-                elel = z[N//2, :] - z[N//2, -1]
-                for el_idx, el in enumerate(elel):
-                    print(x[el_idx], el)
-                break
-                                
+                # x = x[:z.shape[1]//2 + 50]
+                # z = z[:, :z.shape[1]//2 + 50]
+                  
                 sns.heatmap(z, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y)
                 num_xticks_to_display = 10
                 step_size = z.shape[1] // num_xticks_to_display
@@ -301,14 +300,13 @@ def plot_subtracted_observables():
                 plt.savefig(f'Plots/EF/{file[:-3]}.png')
                 plt.close()
                 
-                z = -z_configs + z_configs_without_string
                 for i in range(z.shape[0]):
-                    plt.plot(z[i, :], label = f'Site = {i}')
-                plt.legend(loc = 'lower right')
-                plt.ylabel('Z')
-                plt.xlabel(r'$t/a$')
+                    plt.plot(x, z[i, :], label = f'{i}, Max = {max(z[i, :]):.5f}')
+                plt.legend()
                 plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
-                plt.savefig(f'Plots/Z/{file[:-3]}.png')
+                plt.ylabel('Middle electric field')
+                plt.xlabel(r'$t/a$')
+                plt.savefig(f'Plots/EF_Middle/{file[:-3]}.png')
                 plt.close()
                 
                 z = np.transpose(-q_configs + q_configs_without_string)
@@ -345,6 +343,19 @@ def plot_subtracted_observables():
                 plt.ylabel('Particle number')
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/PN/{file[:-3]}.png')
+                plt.close()
+                
+                fig, ax = plt.subplots()
+                ax1 = ax.twinx()
+                ax1.plot(x, energy - energy_without_string, label = "subtracted right yaxis", c = 'red')
+                ax.plot(x, energy, label = "with string", color = 'green')
+                ax.plot(x, energy_without_string, label = "without string", color = 'blue')
+                plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+                ax.legend()
+                ax1.legend()
+                ax.set_ylabel('Energy')
+                plt.xlabel(r'$t/a$')
+                plt.savefig(f'Plots/E/{file[:-3]}.png')
                 plt.close()
                             
             else:

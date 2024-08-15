@@ -109,8 +109,12 @@ lambda = inputs["lambda"]
 aT = inputs["aT"]
 aD = inputs["aD"]
 env_corr_type = inputs["env_corr_type"]
-sites = siteinds(mps) # This is done so that the odd, even gates and taylor MPO have physical legs matching the purified MPS and combining this with the swapprime done on the operators later the transpose is taken on the operators acting on the even sites which correspond to operators acting on the right of the density matrix
-for i in 2:2:length(sites)
+sites = siteinds(mps)
+l_0_1 = inputs["l_0_1"]
+side = "left"
+H = get_double_aH_Hamiltonian(sites, x, l_0_1, ma, lambda, side)
+H = MPO(H, sites)
+for i in 2:2:length(sites) # This is done so that the odd, even gates and taylor MPO have physical legs matching the purified MPS and combining this with the swapprime done on the operators later the transpose is taken on the operators acting on the even sites which correspond to operators acting on the right of the density matrix
     sites[i] = dag(sites[i])
 end
 tau = inputs["tau"]
@@ -164,11 +168,13 @@ z_configs = zeros(ComplexF64, number_of_time_steps+1, N)
 z_configs[1, :] = measure_z_config(mps)
 link_dims = zeros(Int64, number_of_time_steps+1, 2*N-1)
 link_dims[1, :] = linkdims(mps)
+energy = zeros(ComplexF64, number_of_time_steps+1)
+energy[1] = measure_mpo(mps, H)
 println("Finished getting the lists for the tracked observables ", now())
 flush(stdout)
 
 # Perform the time evolution
-function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_terms, nn_even_without_l0_terms, results_file, inputs, z_configs, mps)
+function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_terms, nn_even_without_l0_terms, results_file, inputs, z_configs, mps, H)
 
     cutoff = inputs["cutoff"]
     maxdim = inputs["md"]
@@ -254,6 +260,7 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
             z_configs[step+1, :] = measure_z_config(mps)
             linkdims_of_step = linkdims(mps)
             link_dims[step+1, :] = linkdims_of_step
+            energy[step+1] = measure_mpo(mps, H)
 
             # Save state to file
             if step in which_steps_to_save_state
@@ -276,13 +283,14 @@ function evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_te
         flush(stdout)
         write(results_file, "z_configs", z_configs)
         write(results_file, "link_dims", link_dims)
+        write(results_file, "energy", energy)
         println("Finished writing the observables to results h5 file ", now())
         flush(stdout)
 
     end
 
 end
-evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_terms, nn_even_without_l0_terms, results_file, inputs, z_configs, mps)
+evolve(which_applied_field, odd, even, taylor_mpo, nn_odd_without_l0_terms, nn_even_without_l0_terms, results_file, inputs, z_configs, mps, H)
 
 close(results_file)
 
