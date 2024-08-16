@@ -3048,3 +3048,61 @@ function get_double_aH_Hamiltonian_only_kinetic_term(sites, side)
     return opsum
 
 end
+
+function get_double_aH_Hamiltonian_individual_terms(sites, x, l_0, ma, side)
+
+    """
+    This gives aH Hamiltonian
+
+    side specifies "left" or "right" to imply H tensor product I or vice versa
+
+    """
+
+    N = div(length(sites), 2)
+
+    opsum_kinetic_term = OpSum()
+    opsum_mass_term = OpSum()
+    opsum_electric_field_term = OpSum()
+
+    for n in 1:N-1
+
+        if side == "left"
+            n_idx = 2*n-1
+        else
+            n_idx = 2*n 
+        end
+        
+        for m in n+1:N
+
+            if side == "left"
+                m_idx = 2*m-1
+            else
+                m_idx = 2*m
+            end
+            
+            # Long range ZZ interaction term
+            opsum_electric_field_term += 0.25*(1/x)*(N-m),"Z",n_idx,"Z",m_idx
+
+        end
+
+        # Kinetic term
+        opsum_kinetic_term += 0.5,"S+",n_idx,"S-",n_idx+2
+        opsum_kinetic_term += 0.5,"S-",n_idx,"S+",n_idx+2
+
+        opsum_electric_field_term += (1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n_idx
+        
+        opsum_mass_term += (0.5*ma*(-1)^(n-1)),"Z",n_idx
+
+    end
+
+    if side == "left"
+        opsum_mass_term += (0.5*ma*(-1)^(N-1)),"Z",2*N-1
+        opsum_electric_field_term += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1
+    else
+        opsum_mass_term += (0.5*ma*(-1)^(N-1)),"Z",2*N
+        opsum_electric_field_term += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",2
+    end
+
+    return opsum_kinetic_term, opsum_mass_term, opsum_electric_field_term
+
+end
