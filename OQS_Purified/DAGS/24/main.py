@@ -95,18 +95,18 @@ def write_dag():
     number_of_time_steps_list = [1000] # needs same length as tau list
     tau_list = [0.05]*len(number_of_time_steps_list)
     aD_list = [0.5]
-    x_list = [1]
-    ma_list = [0.0]
+    x_list = [1.0]
+    ma_list = [0.01]
     taylor_expansion_cutoff_1 = 1e-9
     taylor_expansion_cutoff_2 = 1e-9
-    maxdim = 500
-    how_many_states_to_save = 0
+    maxdim = 600
+    how_many_states_to_save = 1000
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [12]:
+    for N in [12, 14]:
         dissipator_sites = [i for i in range(1, N+1)]
-        flip_sites = [N//2, N//2 + 1] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
+        flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
         for aT in [10]:
             for x in x_list:
                 for ma in ma_list:
@@ -128,7 +128,7 @@ def write_dag():
                                             for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
                                         
                                                 # Memory, CPU and maximum number of days to run
-                                                mem, cpu, days = 8, 16, 6.99
+                                                mem, cpu, days = 10, 16, 6.99
                                                 
                                                 # Job id for the dag job names and path to h5 for results
                                                 job_id = counter_of_jobs
@@ -197,8 +197,8 @@ def plot_bond_dimensions():
             
             plt.plot(avg_link_dims, label = "Avg")
             plt.plot(max_link_dims, label = "Max")
-            ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val, tau = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3), attributes_dict["tau"]
-            plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+            ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val, tau, wis = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3), attributes_dict["tau"], attributes_dict["wis"]
+            plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}_c_{cutoff}\nl01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}_wis_{wis}')
             plt.xlabel('Iteration step')
             plt.ylabel('Bond dimension')
             plt.legend()
@@ -238,6 +238,15 @@ def plot_subtracted_observables():
         
     if not os.path.exists(f'{path_to_project_number}/Plots/E'):
         os.makedirs(f'{path_to_project_number}/Plots/E')
+        
+    if not os.path.exists(f'{path_to_project_number}/Plots/KE'):
+        os.makedirs(f'{path_to_project_number}/Plots/KE')
+        
+    if not os.path.exists(f'{path_to_project_number}/Plots/EFE'):
+        os.makedirs(f'{path_to_project_number}/Plots/EFE')
+    
+    if not os.path.exists(f'{path_to_project_number}/Plots/ME'):
+        os.makedirs(f'{path_to_project_number}/Plots/ME')
                 
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     
@@ -261,6 +270,9 @@ def plot_subtracted_observables():
                 f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
                 z_configs = np.asarray(f['z_configs'])
                 energy = np.asarray(f['energy'])
+                KE = np.asarray(f['kin_energy'])
+                ME = np.asarray(f['m_energy'])
+                EFE = np.asarray(f['el_energy'])
                 q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
                 ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
                 pn = np.array([0.5*N + 0.5*sum(np.real(z_configs[:, i]) * staggering) for i in range(z_configs.shape[1])])
@@ -275,6 +287,9 @@ def plot_subtracted_observables():
                 f = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
                 z_configs_without_string = np.asarray(f['z_configs'])
                 energy_without_string = np.asarray(f['energy'])
+                KE_without_string = np.asarray(f['kin_energy'])
+                ME_without_string = np.asarray(f['m_energy'])
+                EFE_without_string = np.asarray(f['el_energy'])
                 q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
                 ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
                 pn_without_string = np.array([0.5*N + 0.5*sum(np.real(z_configs_without_string[:, i]) * staggering) for i in range(z_configs_without_string.shape[1])])
@@ -285,10 +300,25 @@ def plot_subtracted_observables():
                 x = np.round(t_over_a_list, decimals = 3)
                 y = list(np.arange(1, N))
                 
+                z_q = np.transpose(-q_configs + q_configs_without_string)
+                t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1])))
+                x_q = np.round(t_over_a_list, decimals = 3)
+                y_q = list(np.arange(1, N))
+                
+                # if (file[:-3] == "2") or (file[:-3] == "4"):
+                #     pn = pn[:len(x)]
+                #     pn_without_string = pn_without_string[:len(x)]
+                
                 # x = x[:z.shape[1]//2 + 50]
                 # z = z[:, :z.shape[1]//2 + 50]
-                  
-                sns.heatmap(z, cmap = 'jet', yticklabels = y)
+                
+                # if (file[:-3] == "2") or (file[:-3] == "4"):
+                #     x = x[:z.shape[1]//2 - 200]
+                #     z = z[:, :z.shape[1]//2 - 200]
+                
+                plt.xlim(0, 20)
+                
+                sns.heatmap(z, cmap = 'jet', vmax = 1, yticklabels = y)
                 num_xticks_to_display = 10
                 step_size = z.shape[1] // num_xticks_to_display
                 x_tick_positions = np.arange(0.5, z.shape[1], step_size, dtype = int)
@@ -309,21 +339,12 @@ def plot_subtracted_observables():
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/EF_Middle/{file[:-3]}.png')
                 plt.close()
-                
-                z = np.transpose(-q_configs + q_configs_without_string)
-                t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1])))
-                x = np.round(t_over_a_list, decimals = 3)
-                y = list(np.arange(1, N))
-                
-                # if (file[:-3] == "2") or (file[:-3] == "4"):
-                #     x = x[:z.shape[1]//2 - 200]
-                #     z = z[:, :z.shape[1]//2 - 200]
                             
-                sns.heatmap(z, vmin = -1, vmax = 1, yticklabels = y)
+                sns.heatmap(z_q, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y_q)
                 num_xticks_to_display = 10
-                step_size = z.shape[1] // num_xticks_to_display
-                x_tick_positions = np.arange(0.5, z.shape[1], step_size, dtype = int)
-                x_tick_labels = x[x_tick_positions]
+                step_size = z_q.shape[1] // num_xticks_to_display
+                x_tick_positions = np.arange(0.5, z_q.shape[1], step_size, dtype = int)
+                x_tick_labels = x_q[x_tick_positions]
                 plt.xticks(x_tick_positions, x_tick_labels)
                 plt.ylabel('Site')
                 plt.xlabel(r'$t/a$')
@@ -331,11 +352,7 @@ def plot_subtracted_observables():
                 plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
                 plt.savefig(f'Plots/Q/{file[:-3]}.png')
                 plt.close()
-                
-                # if (file[:-3] == "2") or (file[:-3] == "4"):
-                #     pn = pn[:len(x)]
-                #     pn_without_string = pn_without_string[:len(x)]
-                
+                                
                 plt.plot(x, pn - pn[0], label = "string")
                 plt.plot(x, pn_without_string - pn_without_string[0], label = "no string")
                 plt.plot(x, -pn + pn_without_string + pn[0] - pn_without_string[0], label = f"subtracted, max = {max(-pn + pn_without_string + pn[0] - pn_without_string[0])}")
@@ -358,6 +375,45 @@ def plot_subtracted_observables():
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/E/{file[:-3]}.png')
                 plt.close()
+                
+                fig, ax = plt.subplots()
+                ax1 = ax.twinx()
+                ax1.plot(x, ME - ME_without_string, label = "subtracted right yaxis", c = 'red')
+                ax.plot(x, ME, label = "with string", color = 'green')
+                ax.plot(x, ME_without_string, label = "without string", color = 'blue')
+                plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+                ax.legend()
+                ax1.legend()
+                ax.set_ylabel('Mass Energy')
+                plt.xlabel(r'$t/a$')
+                plt.savefig(f'Plots/ME/{file[:-3]}.png')
+                plt.close()
+                
+                fig, ax = plt.subplots()
+                ax1 = ax.twinx()
+                ax1.plot(x, KE - KE_without_string, label = "subtracted right yaxis", c = 'red')
+                ax.plot(x, KE, label = "with string", color = 'green')
+                ax.plot(x, KE_without_string, label = "without string", color = 'blue')
+                plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+                ax.legend()
+                ax1.legend()
+                ax.set_ylabel('Kinetic Energy')
+                plt.xlabel(r'$t/a$')
+                plt.savefig(f'Plots/KE/{file[:-3]}.png')
+                plt.close()
+                
+                fig, ax = plt.subplots()
+                ax1 = ax.twinx()
+                ax1.plot(x, EFE - EFE_without_string, label = "subtracted right yaxis", c = 'red')
+                ax.plot(x, EFE, label = "with string", color = 'green')
+                ax.plot(x, EFE_without_string, label = "without string", color = 'blue')
+                plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
+                ax.legend()
+                ax1.legend()
+                ax.set_ylabel('Electric Field Energy')
+                plt.xlabel(r'$t/a$')
+                plt.savefig(f'Plots/EFE/{file[:-3]}.png')
+                plt.close()
                             
             else:
                 
@@ -367,8 +423,8 @@ def plot_subtracted_observables():
             
             print(file)
             
-# write_dag()
+write_dag()
 
 # plot_bond_dimensions()
 
-plot_subtracted_observables()
+# plot_subtracted_observables()

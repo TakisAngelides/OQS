@@ -3049,7 +3049,7 @@ function get_double_aH_Hamiltonian_only_kinetic_term(sites, side)
 
 end
 
-function get_double_aH_Hamiltonian_individual_terms(sites, x, l_0, ma, side)
+function get_double_aH_Hamiltonian_individual_terms(N, x, l_0, ma, side)
 
     """
     This gives aH Hamiltonian
@@ -3057,8 +3057,6 @@ function get_double_aH_Hamiltonian_individual_terms(sites, x, l_0, ma, side)
     side specifies "left" or "right" to imply H tensor product I or vice versa
 
     """
-
-    N = div(length(sites), 2)
 
     opsum_kinetic_term = OpSum()
     opsum_mass_term = OpSum()
@@ -3103,6 +3101,6 @@ function get_double_aH_Hamiltonian_individual_terms(sites, x, l_0, ma, side)
         opsum_electric_field_term += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",2
     end
 
-    return opsum_kinetic_term, opsum_mass_term, opsum_electric_field_term
+    return opsum_kinetic_term, opsum_electric_field_term, opsum_mass_term
 
 end
