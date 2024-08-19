@@ -3104,3 +3104,22 @@ function get_double_aH_Hamiltonian_individual_terms(N, x, l_0, ma, side)
     return opsum_kinetic_term, opsum_electric_field_term, opsum_mass_term
 
 end
+
+function get_mutual_info(purified_mps, A_indices, B_indices)
+
+    # The definition of mutual information is: S(rho_A) + S(rho_B) - S(rho_AB)
+    # where S(rho) = -tr(rho log(rho)), rho_A = tr_B(rho), rho_B = tr_A(rho), rho_AB = tr_A(tr_B(rho))
+
+    rho_mpo = mpo_from_purified_mps(purified_mps)
+    sites = map(noprime, siteinds(rho_mpo; :plev => 1))
+    indices = 1:length(rho_mpo)
+    trace_indices_A = setdiff(indices, A_indices)
+    trace_indices_B = setdiff(indices, B_indices)
+    trace_indices_AB = setdiff(indices, vcat(A_indices, B_indices))
+    S_A = get_entanglement_entropy_mpo(rho_mpo, trace_indices_A, sites; tol = 1e-12)
+    S_B = get_entanglement_entropy_mpo(rho_mpo, trace_indices_B, sites; tol = 1e-12)
+    S_AB = get_entanglement_entropy_mpo(rho_mpo, trace_indices_AB, sites; tol = 1e-12)
+
+    return S_A + S_B - S_AB
+
+end
