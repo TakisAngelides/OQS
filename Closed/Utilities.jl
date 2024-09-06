@@ -479,7 +479,9 @@ end
 function get_op(ops, positions, N; reverse_flag = true)
 
     op_dict = Dict("I" => sparse([1 0; 0 1]), "X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]), "S-" => sparse([0 0; 1 0]), "S+" => sparse([0 1; 0 0]))
-    zipped = TupleTools.sort(Tuple(zip(1:length(ops), positions, ops)); by = x -> x[2])
+    
+    zipped = [(i, pos, op) for ((i, op), pos) in zip(enumerate(ops), positions)]
+    zipped = sort(zipped, by = x -> (x[2], x[1]))
     old_positions = [element[2] for element in zipped] 
     old_ops = [element[3] for element in zipped]
 
@@ -664,5 +666,22 @@ function get_applied_field(which_applied_field, inputs, t_over_a)
             return l_0_1 + l_0_2*cos(a_omega*t_over_a)
         end
     end
+
+end
+
+function get_pseudomomentum_operator(N, x)
+
+    op = spzeros(2^(N), 2^(N))
+
+    for n in 1:N-2
+
+        op += get_op(["S-", "Z", "S+"], [n, n+1, n+2], N)
+        op += get_op(["S+", "Z", "S-"], [n, n+1, n+2], N)
+
+    end
+
+    op *= -1im*x
+
+    return op
 
 end

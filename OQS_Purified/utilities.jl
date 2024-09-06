@@ -692,7 +692,9 @@ end
 function get_op(ops, positions, N; reverse_flag = true)
 
     op_dict = Dict("X" => sparse([0 1; 1 0]), "Y" => sparse([0 -1im; 1im 0]), "Z" => sparse([1 0; 0 -1]), "S+" => sparse([0 1; 0 0]), "S-" => sparse([0 0; 1 0]))
-    zipped = TupleTools.sort(Tuple(zip(1:length(ops), positions, ops)); by = x -> x[2])
+    
+    zipped = [(i, pos, op) for ((i, op), pos) in zip(enumerate(ops), positions)]
+    zipped = sort(zipped, by = x -> (x[2], x[1]))
     old_positions = [element[2] for element in zipped] 
     old_ops = [element[3] for element in zipped]
 
