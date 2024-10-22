@@ -2783,6 +2783,9 @@ function get_Lindblad_opsum_without_l0_terms(sites, x, ma, lambda, aT, aD, env_c
     if aD != 0
         for n in dissipator_sites
             for m in dissipator_sites
+                if env_corr_type == "delta" && n != m
+                    continue
+                end
                 res += environment_correlator(env_corr_type, n, m, aD, inputs) * ( get_aLm_aLndag(2*n, 2*m-1, aT, sites) - 0.5 * get_aLndag_aLm(2*n-1, 2*m-1, aT, sites, "left") - 0.5 * get_aLndag_aLm(2*n, 2*m, aT, sites, "right") )
             end
         end
@@ -3051,7 +3054,7 @@ function get_double_aH_Hamiltonian_only_kinetic_term(sites, side)
 
 end
 
-function get_double_aH_Hamiltonian_individual_terms(N, x, l_0, ma, side)
+function get_double_aH_Hamiltonian_individual_terms(N, x, l_0, side)
 
     """
     This gives aH Hamiltonian
@@ -3091,15 +3094,15 @@ function get_double_aH_Hamiltonian_individual_terms(N, x, l_0, ma, side)
 
         opsum_electric_field_term += (1/x)*(N/8 - 0.25*ceil((n-1)/2) + l_0*(N-n)/2),"Z",n_idx
         
-        opsum_mass_term += (0.5*ma*(-1)^(n-1)),"Z",n_idx
+        opsum_mass_term += (0.5*(-1)^(n-1)),"Z",n_idx
 
     end
 
     if side == "left"
-        opsum_mass_term += (0.5*ma*(-1)^(N-1)),"Z",2*N-1
+        opsum_mass_term += (0.5*(-1)^(N-1)),"Z",2*N-1
         opsum_electric_field_term += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",1
     else
-        opsum_mass_term += (0.5*ma*(-1)^(N-1)),"Z",2*N
+        opsum_mass_term += (0.5*(-1)^(N-1)),"Z",2*N
         opsum_electric_field_term += ((l_0^2)*(N-1)/(2*x) + (l_0*N)/(4*x) + (N^2)/(16*x)),"Id",2
     end
 

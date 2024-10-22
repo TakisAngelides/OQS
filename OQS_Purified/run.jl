@@ -114,7 +114,7 @@ l_0_1 = inputs["l_0_1"]
 side = "left"
 H = get_double_aH_Hamiltonian(sites, x, l_0_1, ma, lambda, side)
 H = MPO(H, sites)
-H_kin, H_el, H_m = get_double_aH_Hamiltonian_individual_terms(N, x, l_0_1, ma, side)
+H_kin, H_el, H_m = get_double_aH_Hamiltonian_individual_terms(N, x, l_0_1, side)
 H_kin, H_el, H_m = MPO(H_kin, sites), MPO(H_el, sites), MPO(H_m, sites)
 for i in 2:2:length(sites) # This is done so that the odd, even gates and taylor MPO have physical legs matching the purified MPS and combining this with the swapprime done on the operators later the transpose is taken on the operators acting on the even sites which correspond to operators acting on the right of the density matrix
     sites[i] = dag(sites[i])
