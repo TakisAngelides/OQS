@@ -3003,12 +3003,16 @@ function mpo_from_purified_mps(mps)
 
 end
 
-function measure_mpo(mps, mpo)
+function measure_mpo(mps, mpo; alg = "none")
 
     sites = siteinds(mps)
     l = length(mps)
 
-    mps = apply(mpo, mps)
+    if alg == "none"
+        mps = apply(mpo, mps)
+    else
+        mps = apply(mpo, mps; alg = alg)
+    end
 
     i = 1
     left, right = 2*i-1, 2*i

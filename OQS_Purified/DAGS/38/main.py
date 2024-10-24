@@ -127,7 +127,7 @@ def write_dag():
                                     for l_0_1 in [0.0]: # np.linspace(0.0, 0.5, 20): # this is the constant part of the applied field
                                         for conserve_qns in ["true"]:
                                             for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
-                                                for cpu in [8, 16, 32]:
+                                                for cpu in [32, 64]:
                                         
                                                     # Memory, CPU and maximum number of days to run
                                                     # mem, cpu, days = 64, 16, 6.99
