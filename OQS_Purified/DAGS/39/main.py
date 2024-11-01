@@ -29,7 +29,8 @@ import pickle
 # which_applied_field = inputs["waf"]
 # env_corr_type = inputs["env_corr_type"]
 # which_initial_state = inputs["wis"]
-# day_to_make_backup = inputs["dtmb"]
+# g.attrs["days"] = days
+# g.attrs["dtmb"] = day_to_make_backup
 
 # Extra inputs needed when the correlator is gaussian
 
@@ -94,7 +95,7 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [5000] # needs same length as tau list
+    number_of_time_steps_list = [10000] # needs same length as tau list
     tau_list = [0.01]
     aD_list = [2.0] # np.linspace(2.0, 5.0, 20)
     x_list = [1.0]
@@ -130,9 +131,10 @@ def write_dag():
                                             for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
                                                 for cpu in [1]:
                                         
-                                                    # Memory and maximum number of days to run
-                                                    mem, days = 1, 5/60/24
-                                                    day_to_make_backup = 2.5/60/24
+                                                    # Memory, CPU and maximum number of days to run
+                                                    # mem, cpu, days = 64, 16, 6.99
+                                                    mem, days = 4, 20/60/24
+                                                    day_to_make_backup = 10/60/24
                                                     
                                                     # Job id for the dag job names and path to h5 for results
                                                     job_id = counter_of_jobs
@@ -164,7 +166,6 @@ def write_dag():
                                                     g.attrs["wstss"] = which_steps_to_save_state
                                                     g.attrs["mem"] = mem
                                                     g.attrs["days"] = days
-                                                    g.attrs["cpu"] = cpu
                                                     g.attrs["dtmb"] = day_to_make_backup
                         
                                                     # Write job to dag

@@ -29,6 +29,8 @@ import pickle
 # which_applied_field = inputs["waf"]
 # env_corr_type = inputs["env_corr_type"]
 # which_initial_state = inputs["wis"]
+# g.attrs["days"] = days
+# g.attrs["dtmb"] = day_to_make_backup
 
 # Extra inputs needed when the correlator is gaussian
 
@@ -81,6 +83,8 @@ def write_dag():
         os.makedirs(f'{path_to_project_number}/Plots')
     if not os.path.exists(f'{path_to_project_number}/HDF5'):
         os.makedirs(f'{path_to_project_number}/HDF5')        
+    if not os.path.exists(f'{path_to_project_number}/HDF5_b'):
+        os.makedirs(f'{path_to_project_number}/HDF5_b')   
     if not os.path.exists(f'{path_to_project_number}/Logs/Error'):
         os.makedirs(f'{path_to_project_number}/Logs/Error')        
     if not os.path.exists(f'{path_to_project_number}/Logs/Output'):
@@ -94,14 +98,14 @@ def write_dag():
     # Static applied field case and delta correlator
     lambd = 0
     number_of_time_steps_list = [2000] # needs same length as tau list
-    tau_list = [0.05]*len(number_of_time_steps_list)
-    aD_list = np.linspace(2.0, 5.0, 20)
+    tau_list = [0.05]
+    aD_list = [2.0, 5.0] # np.linspace(2.0, 5.0, 20)
     x_list = [1.0]
-    ma_list = [0.1, 0.25, 0.5, 0.75, 1.0]
+    ma_list = np.linspace(0.1, 1.0, 20)
     taylor_expansion_cutoff_1 = 1e-9
     taylor_expansion_cutoff_2 = 1e-9
     maxdim = 700
-    how_many_states_to_save = 20
+    how_many_states_to_save = 0
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
@@ -115,6 +119,7 @@ def write_dag():
                         for tau_idx, tau in enumerate(tau_list):
                             # Below we define a list of the step numbers at which we want to save the state
                             number_of_time_steps = number_of_time_steps_list[tau_idx]
+                            steps_to_backup = [number_of_time_steps//2, 3*number_of_time_steps//4]
                             if how_many_states_to_save == 0:
                                 which_steps_to_save_state = []
                             else: 
@@ -124,49 +129,55 @@ def write_dag():
                             which_steps_to_save_state = list(set(which_steps_to_save_state))
                             for cutoff in [1e-11]:
                                 for taylor_expansion_order in [2]:
-                                    for l_0_1 in np.linspace(0.0, 0.5, 20): # this is the constant part of the applied field
+                                    for l_0_1 in [0.0]: # np.linspace(0.0, 0.5, 20): # this is the constant part of the applied field
                                         for conserve_qns in ["true"]:
                                             for which_initial_state in ["dirac_vacuum", "dirac_vacuum_with_string"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string"
+                                                for cpu in [8]:
                                         
-                                                # Memory, CPU and maximum number of days to run
-                                                mem, cpu, days = 10, 8, 6.99
-                                                
-                                                # Job id for the dag job names and path to h5 for results
-                                                job_id = counter_of_jobs
-                                                counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
-                                                                                            
-                                                # Write inputs to h5
-                                                g = f_h5.create_group(f'{job_id}')       
-                                                g.attrs["N"] = N
-                                                g.attrs["x"] = x
-                                                g.attrs["ma"] = ma
-                                                g.attrs["lambda"] = lambd
-                                                g.attrs["aT"] = aT
-                                                g.attrs["aD"] = aD
-                                                g.attrs["cqns"] = conserve_qns
-                                                g.attrs["ds"] = dissipator_sites
-                                                g.attrs["tau"] = tau
-                                                g.attrs["nots"] = number_of_time_steps
-                                                g.attrs["tvaff"] = time_varying_applied_field_flag
-                                                g.attrs["tec_1"] = taylor_expansion_cutoff_1
-                                                g.attrs["tec_2"] = taylor_expansion_cutoff_2
-                                                g.attrs["cutoff"] = cutoff
-                                                g.attrs["md"] = maxdim
-                                                g.attrs["teo"] = taylor_expansion_order
-                                                g.attrs["l_0_1"] = l_0_1
-                                                g.attrs["waf"] = which_applied_field
-                                                g.attrs["env_corr_type"] = env_corr_type
-                                                g.attrs["wis"] = which_initial_state
-                                                g.attrs["fs"] = flip_sites
-                                                g.attrs["wstss"] = which_steps_to_save_state
-                                                g.attrs["mem"] = mem
-                    
-                                                # Write job to dag
-                                                job_name = f'{job_id}'
-                                                f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
-                                                f_dag.write(f'VARS ' + job_name + f' job_id="{job_id}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
-                                                f_dag.write('RETRY ' + job_name + ' 2\n')
-        
+                                                    # Memory, CPU and maximum number of days to run
+                                                    # mem, cpu, days = 64, 16, 6.99
+                                                    mem, days = 8, 6.99
+                                                    day_to_make_backup = 6
+                                                    
+                                                    # Job id for the dag job names and path to h5 for results
+                                                    job_id = counter_of_jobs
+                                                    counter_of_jobs += 1 # after assigning the job_id this is incremented for the next job
+                                                                                                
+                                                    # Write inputs to h5
+                                                    g = f_h5.create_group(f'{job_id}')       
+                                                    g.attrs["N"] = N
+                                                    g.attrs["x"] = x
+                                                    g.attrs["ma"] = ma
+                                                    g.attrs["lambda"] = lambd
+                                                    g.attrs["aT"] = aT
+                                                    g.attrs["aD"] = aD
+                                                    g.attrs["cqns"] = conserve_qns
+                                                    g.attrs["ds"] = dissipator_sites
+                                                    g.attrs["tau"] = tau
+                                                    g.attrs["nots"] = number_of_time_steps
+                                                    g.attrs["tvaff"] = time_varying_applied_field_flag
+                                                    g.attrs["tec_1"] = taylor_expansion_cutoff_1
+                                                    g.attrs["tec_2"] = taylor_expansion_cutoff_2
+                                                    g.attrs["cutoff"] = cutoff
+                                                    g.attrs["md"] = maxdim
+                                                    g.attrs["teo"] = taylor_expansion_order
+                                                    g.attrs["l_0_1"] = l_0_1
+                                                    g.attrs["waf"] = which_applied_field
+                                                    g.attrs["env_corr_type"] = env_corr_type
+                                                    g.attrs["wis"] = which_initial_state
+                                                    g.attrs["fs"] = flip_sites
+                                                    g.attrs["wstss"] = which_steps_to_save_state
+                                                    g.attrs["mem"] = mem
+                                                    g.attrs["days"] = days
+                                                    g.attrs["dtmb"] = day_to_make_backup
+                                                    g.attrs["stb"] = steps_to_backup
+                        
+                                                    # Write job to dag
+                                                    job_name = f'{job_id}'
+                                                    f_dag.write(f'JOB ' + job_name + f' {path_to_sub}\n')
+                                                    f_dag.write(f'VARS ' + job_name + f' job_id="{job_id}" path_to_project_number="{path_to_project_number}" file_to_run="{file_to_run}" cpu="{cpu}" mem="{mem}" days="{days}"\n')
+                                                    f_dag.write('RETRY ' + job_name + ' 2\n')
+            
     # Close the dag file and the h5 input file
     f_dag.close() 
     f_h5.close()
@@ -333,7 +344,7 @@ def plot_subtracted_observables():
                 plt.savefig(f'Plots/EF_Middle/{file[:-3]}.png')
                 plt.close()
                             
-                sns.heatmap(z_q, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y_q)
+                sns.heatmap(z_q, vmin = -1, vmax = 1, yticklabels = y_q)
                 num_xticks_to_display = 10
                 step_size = z_q.shape[1] // num_xticks_to_display
                 x_tick_positions = np.arange(0.5, z_q.shape[1], step_size, dtype = int)
@@ -434,94 +445,98 @@ def get_thermalization_times():
     path_to_inputs = f'{path_to_project_number}/inputs.h5'
     
     f_inputs = h5py.File(path_to_inputs, 'r')
+     
+    aD_list = []
+    l_0_1_list = []
+    ma_list = []
+    thermalization_time_list = []
     
-    for mass_filter in [0.1, 0.25, 0.5, 0.75, 1.0]:
-    
-        aD_list = []
-        l_0_1_list = []
-        thermalization_time_list = []
+    for file in os.listdir(path_to_HDF5):
         
-        for file in os.listdir(path_to_HDF5):
+        try:
+    
+            g = f_inputs[file[:-3]]
+            attributes_dict = {attr_name: attr_value for attr_name, attr_value in g.attrs.items()}
             
-            try:
-        
-                g = f_inputs[file[:-3]]
-                attributes_dict = {attr_name: attr_value for attr_name, attr_value in g.attrs.items()}
-                
-                if attributes_dict['wis'] == 'dirac_vacuum_with_string':
+            if attributes_dict['wis'] == 'dirac_vacuum_with_string':
 
-                    time_step_limit = -1
-                    N = attributes_dict['N']
-                    l_0_1 = attributes_dict['l_0_1']
-                    tau = attributes_dict['tau']
-                    aD = attributes_dict['aD']
-                    # if aD != 2.0 or aD != 5.0:
-                    #     continue
-                    # if l_0_1 != 0.0 or l_0_1 != 0.5:
-                    #     continue
-                    aD = np.round(aD, decimals = 3)
-                    ma = attributes_dict['ma']
-                    x_val = attributes_dict['x']
-                    if ma != mass_filter:
-                        continue 
-                    staggering = np.array([(-1)**n for n in range(N)])
-                    f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
-                    z_configs = np.asarray(f['z_configs'])[:,:time_step_limit]
-                    energy = np.asarray(f['energy'])[:time_step_limit]
-                    KE = np.asarray(f['kin_energy'])[:time_step_limit]
-                    ME = np.asarray(f['m_energy'])[:time_step_limit]
-                    EFE = np.asarray(f['el_energy'])[:time_step_limit]
-                    q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
-                    ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
-                    pn = np.array([0.5*N + 0.5*sum(np.real(z_configs[:, i]) * staggering) for i in range(z_configs.shape[1])])
-                    f.close()
-                
-                    file_without_string = f'{int(file[:-3])-1}'
-                    attributes_dict_without_string = {attr_name: attr_value for attr_name, attr_value in f_inputs[file_without_string].attrs.items()}
-
-                    N = attributes_dict_without_string['N']
-                    l_0_1 = attributes_dict_without_string['l_0_1']
-                    staggering = np.array([(-1)**n for n in range(N)])
-                    f_without_string = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
-                    z_configs_without_string = np.asarray(f_without_string['z_configs'])[:,:time_step_limit]
-                    energy_without_string = np.asarray(f_without_string['energy'])[:time_step_limit]
-                    KE_without_string = np.asarray(f_without_string['kin_energy'])[:time_step_limit]
-                    ME_without_string = np.asarray(f_without_string['m_energy'])[:time_step_limit]
-                    EFE_without_string = np.asarray(f_without_string['el_energy'])[:time_step_limit]
-                    q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
-                    ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
-                    pn_without_string = np.array([0.5*N + 0.5*sum(np.real(z_configs_without_string[:, i]) * staggering) for i in range(z_configs_without_string.shape[1])])
-                    f_without_string.close()
-                    
-                    z = ef_configs - ef_configs_without_string
-                    t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1])))
-                    
-                    aD_list.append(aD)
-                    l_0_1_list.append(l_0_1)
-                    fraction = 0.3
-                    thermalization_time_list.append(t_over_a_list[get_index_of_reduced_value(fraction, z[N//2-1,:])])
-
-                else:
-                    
+                time_step_limit = -1
+                N = attributes_dict['N']
+                l_0_1 = attributes_dict['l_0_1']
+                tau = attributes_dict['tau']
+                aD = attributes_dict['aD']
+                if aD != 2.0:
                     continue
-                
-            except:
-                
-                print(file)
-                
-        data = pd.DataFrame(data={'l_0_1':l_0_1_list, 'aD':aD_list, 'Thermalization_time':thermalization_time_list})
-        data = data.pivot(index='aD', columns='l_0_1', values='Thermalization_time')
-        
-        with open(f'Plots/Thermalization_Heatmap/{mass_filter}.pickle', 'wb') as f:
-            pickle.dump(data, f)
+                # if l_0_1 != 0.0 or l_0_1 != 0.5:
+                #     continue
+                aD = np.round(aD, decimals = 3)
+                ma = attributes_dict['ma']
+                x_val = attributes_dict['x']
+                # if ma != mass_filter:
+                #     continue 
+                staggering = np.array([(-1)**n for n in range(N)])
+                f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
+                z_configs = np.asarray(f['z_configs'])[:,:time_step_limit]
+                energy = np.asarray(f['energy'])[:time_step_limit]
+                KE = np.asarray(f['kin_energy'])[:time_step_limit]
+                ME = np.asarray(f['m_energy'])[:time_step_limit]
+                EFE = np.asarray(f['el_energy'])[:time_step_limit]
+                q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
+                ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
+                pn = np.array([0.5*N + 0.5*sum(np.real(z_configs[:, i]) * staggering) for i in range(z_configs.shape[1])])
+                f.close()
             
-        print(f'Finished {mass_filter}.')
-        
-        # sns.heatmap(data, linewidths=0)
-        # plt.ylabel(r'$D$')
-        # plt.xlabel(r'$l_0$')
-        # plt.savefig(f'Plots/Thermalization_Heatmap/thermalization_times_ma_{mass_filter}.pdf', dpi = 1200)
-        # plt.close()
+                file_without_string = f'{int(file[:-3])-1}'
+                attributes_dict_without_string = {attr_name: attr_value for attr_name, attr_value in f_inputs[file_without_string].attrs.items()}
+
+                N = attributes_dict_without_string['N']
+                l_0_1 = attributes_dict_without_string['l_0_1']
+                staggering = np.array([(-1)**n for n in range(N)])
+                f_without_string = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
+                z_configs_without_string = np.asarray(f_without_string['z_configs'])[:,:time_step_limit]
+                energy_without_string = np.asarray(f_without_string['energy'])[:time_step_limit]
+                KE_without_string = np.asarray(f_without_string['kin_energy'])[:time_step_limit]
+                ME_without_string = np.asarray(f_without_string['m_energy'])[:time_step_limit]
+                EFE_without_string = np.asarray(f_without_string['el_energy'])[:time_step_limit]
+                q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
+                ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
+                pn_without_string = np.array([0.5*N + 0.5*sum(np.real(z_configs_without_string[:, i]) * staggering) for i in range(z_configs_without_string.shape[1])])
+                f_without_string.close()
+                
+                z = ef_configs - ef_configs_without_string
+                t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1]+1)))
+                
+                aD_list.append(aD)
+                l_0_1_list.append(l_0_1)
+                ma_list.append(ma)
+                fraction = 0.2
+                thermalization_time = t_over_a_list[get_index_of_reduced_value(fraction, z[N//2-1,:])]
+                # print(ma, thermalization_time)
+                thermalization_time_list.append(thermalization_time)
+
+            else:
+                
+                continue
+            
+        except:
+            
+            print(file)
+    
+    ma_list, thermalization_time_list = zip(*sorted(zip(ma_list, thermalization_time_list)))
+    plt.plot(ma_list[10:], thermalization_time_list[10:], '-o')
+    plt.savefig(f'Plots/Thermalization_Heatmap/thermalization_times_aD_2.0.png')
+            
+    # data = pd.DataFrame(data={'l_0_1':l_0_1_list, 'aD':aD_list, 'Thermalization_time':thermalization_time_list})
+    # data = data.pivot(index='aD', columns='l_0_1', values='Thermalization_time')
+    
+    # with open(f'Plots/Thermalization_Heatmap/{ma}.pickle', 'wb') as f:
+    #     pickle.dump(data, f)
+            
+    # sns.heatmap(data, linewidths=0)
+    # plt.ylabel(r'$D$')
+    # plt.xlabel(r'$l_0$')
+    # plt.savefig(f'Plots/Thermalization_Heatmap/thermalization_times_ma_{mass_filter}.pdf', dpi = 1200)
+    # plt.close()
 
 def plot_subtracted_observables_only_selected():
     
@@ -569,10 +584,10 @@ def plot_subtracted_observables_only_selected():
                 N = attributes_dict['N']
                 l_0_1 = attributes_dict['l_0_1']
                 ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
-                # if str(l_0_1) != '0.0' and str(l_0_1) != '0.5':
-                #     continue
-                # if str(aD) != '2.0' and str(aD) != '5.0':
-                #     continue
+                if str(l_0_1) != '0.0' and str(l_0_1) != '0.5':
+                    continue
+                if str(aD) != '2.0' and str(aD) != '5.0':
+                    continue
                 # print(l_0_1, aD)
                 tau = attributes_dict['tau']
                 staggering = np.array([(-1)**n for n in range(N)])
@@ -732,6 +747,114 @@ def plot_subtracted_observables_only_selected():
         except:
             
             print(file)
+
+def get_time_to_reach_the_boundary():
+    
+    if not os.path.exists(f'{path_to_project_number}/Plots/Time_To_Boundary'):
+        os.makedirs(f'{path_to_project_number}/Plots/Time_To_Boundary')
+    
+    def get_index_of_reduced_value(fraction, l):
+        
+        target = l[0]*fraction
+        for element_idx, element in enumerate(l):
+            if element < target:
+                return element_idx
+        return -1
+                
+    path_to_HDF5 = f'{path_to_project_number}/HDF5'
+    
+    path_to_inputs = f'{path_to_project_number}/inputs.h5'
+    
+    f_inputs = h5py.File(path_to_inputs, 'r')
+     
+    aD_list = []
+    l_0_1_list = []
+    ma_list = []
+    time_to_boundary_list = []
+    
+    for file in os.listdir(path_to_HDF5):
+        
+        try:
+    
+            g = f_inputs[file[:-3]]
+            attributes_dict = {attr_name: attr_value for attr_name, attr_value in g.attrs.items()}
+            
+            if attributes_dict['wis'] == 'dirac_vacuum_with_string':
+
+                time_step_limit = -1
+                N = attributes_dict['N']
+                l_0_1 = attributes_dict['l_0_1']
+                tau = attributes_dict['tau']
+                aD = attributes_dict['aD']
+                if aD != 2.0:
+                    continue
+                # if l_0_1 != 0.0 or l_0_1 != 0.5:
+                #     continue
+                aD = np.round(aD, decimals = 3)
+                ma = attributes_dict['ma']
+                x_val = attributes_dict['x']
+                # if ma != mass_filter:
+                #     continue 
+                staggering = np.array([(-1)**n for n in range(N)])
+                f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
+                z_configs = np.asarray(f['z_configs'])
+                q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
+                ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
+                f.close()
+            
+                file_without_string = f'{int(file[:-3])-1}'
+                attributes_dict_without_string = {attr_name: attr_value for attr_name, attr_value in f_inputs[file_without_string].attrs.items()}
+
+                N = attributes_dict_without_string['N']
+                l_0_1 = attributes_dict_without_string['l_0_1']
+                staggering = np.array([(-1)**n for n in range(N)])
+                f_without_string = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
+                z_configs_without_string = np.asarray(f_without_string['z_configs'])
+                q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
+                ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
+                f_without_string.close()
+                
+                z = ef_configs - ef_configs_without_string
+                t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1])))
+                
+                aD_list.append(aD)
+                l_0_1_list.append(l_0_1)
+                ma_list.append(ma)
+                fraction = 0.2
+                # thermalization_time = t_over_a_list[get_index_of_reduced_value(fraction, z[N//2-1,:])]
+                # print(ma, thermalization_time)
+                # thermalization_time_list.append(thermalization_time)
+                time_to_boundary = t_over_a_list[np.argmax(z[0, :])]
+                time_to_boundary_list.append(time_to_boundary)
+
+            else:
+                
+                continue
+            
+        except:
+            
+            print(file)
+    
+    # ma_list, thermalization_time_list = zip(*sorted(zip(ma_list, thermalization_time_list)))
+    # plt.plot(ma_list[10:], thermalization_time_list[10:], '-o')
+    # plt.savefig(f'Plots/Thermalization_Heatmap/thermalization_times_aD_2.0.png')
+    
+    ma_list, time_to_boundary_list = zip(*sorted(zip(ma_list, time_to_boundary_list)))
+    print(ma_list)
+    plt.plot(ma_list[:10], time_to_boundary_list[:10], '-o')
+    plt.savefig(f'Plots/Time_To_Boundary/aD_2.0.png')
+            
+    # data = pd.DataFrame(data={'l_0_1':l_0_1_list, 'aD':aD_list, 'Thermalization_time':thermalization_time_list})
+    # data = data.pivot(index='aD', columns='l_0_1', values='Thermalization_time')
+    
+    # with open(f'Plots/Thermalization_Heatmap/{ma}.pickle', 'wb') as f:
+    #     pickle.dump(data, f)
+            
+    # sns.heatmap(data, linewidths=0)
+    # plt.ylabel(r'$D$')
+    # plt.xlabel(r'$l_0$')
+    # plt.savefig(f'Plots/Thermalization_Heatmap/thermalization_times_ma_{mass_filter}.pdf', dpi = 1200)
+    # plt.close()
            
 
 # write_dag()
@@ -742,5 +865,6 @@ def plot_subtracted_observables_only_selected():
 
 # get_thermalization_times()
 
-plot_subtracted_observables_only_selected()
+# plot_subtracted_observables_only_selected()
 
+# get_time_to_reach_the_boundary()

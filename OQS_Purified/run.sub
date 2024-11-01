@@ -14,9 +14,9 @@ request_memory = $(mem)G
 
 request_cpus = $(cpu)
 
-+RequestRuntime = $(days)*24*3600
++MaxRuntime = $(days)*24*3600
 
-max_retries = 1
+max_retries = 3
 
 error = $(path_to_project_number)/Logs/Error/$(job_id).error
 
