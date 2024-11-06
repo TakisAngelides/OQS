@@ -1308,7 +1308,7 @@ function get_Lindblad_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_over_a, a
     H = get_aH_Hamiltonian_sparse_matrix(N, x, ma, l_0, lambda)
 
     # Unitary part of Lindbladian
-    L += -1im * my_kron(H, eye(2^N)) # + 1im * my_kron(eye(2^N), transpose(H)) 
+    L += -1im * my_kron(H, eye(2^N)) + 1im * my_kron(eye(2^N), transpose(H)) 
 
     for n in 1:N
         for m in 1:N
@@ -1531,13 +1531,17 @@ function get_Lindblad_reduced_sparse_matrix(N, x, ma, l_0, lambda, aD_0, sigma_o
 
             for n in 1:N
                 for m in 1:N
+                    
+                    if (env_corr_type == "delta") && (n != m)
+                        continue
+                    end
 
                     tmp1 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, n, aT))
                     tmp2 = project_zeroq(get_Lindblad_jump_operator_sparse_matrix(N, m, aT))
 
                     tmp3 = tmp1' * tmp2 # the dash is the dagger
                     
-                    L += environment_correlator(env_corr_type, n, m, aD_0, sigma_over_a) * (my_kron(tmp2, conj(tmp1)) - 0.5*my_kron(tmp3, idnt_r) -0.5*my_kron(idnt_r, transpose(tmp3)))
+                    L += environment_correlator(env_corr_type, n, m, aD_0, inputs) * (my_kron(tmp2, conj(tmp1)) - 0.5*my_kron(tmp3, idnt_r) -0.5*my_kron(idnt_r, transpose(tmp3)))
 
                 end
             end
