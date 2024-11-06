@@ -40,10 +40,10 @@ for i, mass in enumerate(masses):
     
     # Annotate each main plot
     if i == 0:
-        ax.text(0.95, 0.5, r"$(a)$", transform=ax.transAxes, ha='right', va='top', fontsize=16)
-        ax.set_ylabel("SKE", fontsize=16)
+        ax.text(0.99, 0.5, r"$(a)$", transform=ax.transAxes, ha='right', va='top', fontsize=16)
+        ax.set_ylabel("Subtracted Kinetic Energy (SKE)", fontsize=18)
     else:
-        ax.text(0.95, 0.5, r"$(b)$", transform=ax.transAxes, ha='right', va='top', fontsize=16)
+        ax.text(0.99, 0.5, r"$(b)$", transform=ax.transAxes, ha='right', va='top', fontsize=16)
     
     for l0 in l0_values:
         for aD in aD_values:
@@ -59,7 +59,9 @@ for i, mass in enumerate(masses):
                 
                 # Inset plot showing the full time series
                 inset_ax.plot(time, values, linestyle=linestyles[linestyle_counter % len(linestyles)])
-                inset_ax.tick_params(axis='both', which='both', direction='in', labelsize=8)
+                inset_ax.tick_params(axis='both', which='both', direction='in', labelsize=12)
+                inset_ax.set_ylabel("SKE", fontsize=16)
+                inset_ax.set_xlabel("$t$", fontsize=16)
                 
                 linestyle_counter += 1
             else:
@@ -70,8 +72,8 @@ for i, mass in enumerate(masses):
         ax.legend(loc="upper left", fontsize=16)
 
 plt.tight_layout()
-fig.supxlabel(r"$t$", fontsize=16)
+fig.supxlabel(r"$t$", fontsize=20, x=0.53)
 fig.subplots_adjust(bottom=0.1) 
-output_path = os.path.join("Plots/combined_plots_from_individual_observables/", "KE_mass_0.1_1.0_with_insets.pdf")
+output_path = os.path.join("Plots/combined_plots_from_individual_observables/", "KE_mass_0.1_1.0.pdf")
 plt.savefig(output_path, dpi=1200)
 plt.close(fig)

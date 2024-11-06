@@ -477,14 +477,11 @@ def get_thermalization_times():
                         continue 
                     staggering = np.array([(-1)**n for n in range(N)])
                     f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
-                    z_configs = np.asarray(f['z_configs'])[:,:time_step_limit]
-                    energy = np.asarray(f['energy'])[:time_step_limit]
-                    KE = np.asarray(f['kin_energy'])[:time_step_limit]
-                    ME = np.asarray(f['m_energy'])[:time_step_limit]
-                    EFE = np.asarray(f['el_energy'])[:time_step_limit]
+                    z_configs = np.asarray(f['z_configs'])
+                    
                     q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
                     ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
-                    pn = np.array([0.5*N + 0.5*sum(np.real(z_configs[:, i]) * staggering) for i in range(z_configs.shape[1])])
+                    
                     f.close()
                 
                     file_without_string = f'{int(file[:-3])-1}'
@@ -494,18 +491,22 @@ def get_thermalization_times():
                     l_0_1 = attributes_dict_without_string['l_0_1']
                     staggering = np.array([(-1)**n for n in range(N)])
                     f_without_string = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
-                    z_configs_without_string = np.asarray(f_without_string['z_configs'])[:,:time_step_limit]
-                    energy_without_string = np.asarray(f_without_string['energy'])[:time_step_limit]
-                    KE_without_string = np.asarray(f_without_string['kin_energy'])[:time_step_limit]
-                    ME_without_string = np.asarray(f_without_string['m_energy'])[:time_step_limit]
-                    EFE_without_string = np.asarray(f_without_string['el_energy'])[:time_step_limit]
+                    z_configs_without_string = np.asarray(f_without_string['z_configs'])
+                    
                     q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
                     ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
-                    pn_without_string = np.array([0.5*N + 0.5*sum(np.real(z_configs_without_string[:, i]) * staggering) for i in range(z_configs_without_string.shape[1])])
+                    
                     f_without_string.close()
                     
-                    z = ef_configs - ef_configs_without_string
+                    # z = ef_configs - ef_configs_without_string
+                    # z = ef_configs_without_string
+                    z = ef_configs
                     t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1]+1)))
+                    
+                    plt.plot(z[N//2-1,:], label = f'D = {aD}, l_0 = {l_0_1}')
+                    plt.legend()
+                    plt.savefig('Plots/test.png')
+                    plt.close()
                     
                     aD_list.append(aD)
                     l_0_1_list.append(l_0_1)
@@ -526,16 +527,16 @@ def get_thermalization_times():
         data = pd.DataFrame(data={'l_0_1':l_0_1_list, 'aD':aD_list, 'Thermalization_time':thermalization_time_list})
         data = data.pivot(index='aD', columns='l_0_1', values='Thermalization_time')
         
-        with open(f'Plots/Thermalization_Heatmap/{mass_filter}.pickle', 'wb') as f:
-            pickle.dump(data, f)
+        # with open(f'Plots/Thermalization_Heatmap/{mass_filter}.pickle', 'wb') as f:
+        #     pickle.dump(data, f)
             
         # print(f'Finished {mass_filter}.')
         
-        # sns.heatmap(data, linewidths=0)
-        # plt.ylabel(r'$D$')
-        # plt.xlabel(r'$l_0$')
-        # plt.savefig(f'Plots/Thermalization_Heatmap/thermalization_times_ma_{mass_filter}.pdf', dpi = 1200)
-        # plt.close()
+        sns.heatmap(data, linewidths=0)
+        plt.ylabel(r'$D$')
+        plt.xlabel(r'$l_0$')
+        plt.savefig(f'Plots/Thermalization_Heatmap/thermalization_times_ma_{mass_filter}_with_string.pdf', dpi = 1200)
+        plt.close()
 
 def plot_subtracted_observables_only_selected():
     
@@ -757,7 +758,7 @@ def plot_subtracted_observables_only_selected():
 
 # plot_subtracted_observables()
 
-# get_thermalization_times()
+get_thermalization_times()
 
-plot_subtracted_observables_only_selected()
+# plot_subtracted_observables_only_selected()
 
