@@ -748,14 +748,121 @@ def plot_subtracted_observables_only_selected():
             
             print(file)
            
+def plot_ef_symmetry():
+        
+    if not os.path.exists(f'{path_to_project_number}/Plots/data'):
+        os.makedirs(f'{path_to_project_number}/Plots/data')
+                    
+    path_to_HDF5 = f'{path_to_project_number}/HDF5'
+    
+    path_to_inputs = f'{path_to_project_number}/inputs.h5'
+    
+    f_inputs = h5py.File(path_to_inputs, 'r')
+
+    for file in os.listdir(path_to_HDF5):
+        
+        # try:
+        
+        g = f_inputs[file[:-3]]
+        attributes_dict = {attr_name: attr_value for attr_name, attr_value in g.attrs.items()}
+        
+        if attributes_dict['wis'] == 'dirac_vacuum_with_string':
+
+            # With string
+            time_step_limit = -1
+            N = attributes_dict['N']
+            l_0_1 = attributes_dict['l_0_1']
+            ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
+            tau = attributes_dict['tau']
+            staggering = np.array([(-1)**n for n in range(N)])
+            f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
+            try:
+                z_configs = np.asarray(f['z_configs'])
+            except:
+                continue
+            q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
+            ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
+            f.close()
+        
+            # Without string
+            file_without_string = f'{int(file[:-3])-1}'
+            attributes_dict_without_string = {attr_name: attr_value for attr_name, attr_value in f_inputs[file_without_string].attrs.items()}
+
+            N = attributes_dict_without_string['N']
+            l_0_1 = attributes_dict_without_string['l_0_1']
+            staggering = np.array([(-1)**n for n in range(N)])
+            f_without_string = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
+            try:
+                z_configs_without_string = np.asarray(f_without_string['z_configs'])
+            except:
+                continue
+            q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
+            ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
+            f_without_string.close()
+            
+            z = ef_configs - ef_configs_without_string
+            t_over_a_list = [0] + list(tau*(np.arange(1, z.shape[1])))
+            x = np.round(t_over_a_list, decimals = 3)
+            y = list(np.arange(1, N))
+            
+            fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(10, 6))
+            colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', 'gray', 'cyan']
+            linestyles = ['-', '--', '-.', ':', '-', '--', '-.', ':', '-']
+            
+            for i in range(N//2 - 1):
+                axes[1].plot(t_over_a_list, np.abs(z[i, :] - z[N-1-i-1, :]), label = f'$i$ = {i}', linestyle = linestyles[i], color = colors[i])
+            
+            axes[1].tick_params(axis='both', direction='in', labelsize=16)
+            
+            axes[1].set_xlabel("$t$", fontsize = 16)
+            axes[1].set_ylabel("$|$SEF($i$) - SEF($N-i-2$)$|$", fontsize = 16)
+            
+            axes[1].set_yscale('log')
+            axes[1].legend(fontsize = 13, ncol = 3)
+            
+            im = axes[0].imshow(z, aspect='auto', origin='lower', extent=[t_over_a_list[0], t_over_a_list[-1], 0, z.shape[0]], cmap='jet')
+
+            # axes[0].set_xlabel("$t$", fontsize = 16)
+            axes[0].set_ylabel("Link", fontsize = 16)
+
+            cbar = fig.colorbar(im, ax=axes[0], location = 'top')
+            cbar.ax.tick_params(labelsize=16)  # Change this value as needed
+            cbar.set_label("SEF", fontsize=16)
+            # Remove borders from the colorbar
+            for spine in cbar.ax.spines.values():
+                spine.set_visible(False)
+
+            fig.subplots_adjust(hspace = 0.4) 
+            
+            fig.text(0.15, 0.83, r'$(a)$', ha='center', fontsize=16)
+            fig.text(0.15, 0.45, r'$(b)$', ha='center', fontsize=16)
+
+            plt.savefig(f'Plots/ef_symmetry_{tau}.pdf', bbox_inches = 'tight', dpi = 1200)
+            
+            # with open(f'Plots/data/EF_{N}_{ma}_{l_0_1}_{aD}_{tau}.pickle', 'wb') as f:
+            #     pickle.dump(z, f)
+                
+            
+                            
+        #     else:
+                
+        #         continue
+            
+        # except:
+            
+        #     print(file)
+            
+    
+ 
 
 # write_dag()
 
-plot_bond_dimensions()
+# plot_bond_dimensions()
 
-plot_subtracted_observables()
+# plot_subtracted_observables()
 
 # get_thermalization_times()
 
 # plot_subtracted_observables_only_selected()
 
+plot_ef_symmetry()

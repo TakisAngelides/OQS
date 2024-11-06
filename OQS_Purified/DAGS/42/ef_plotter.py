@@ -69,9 +69,9 @@ for i, N in enumerate([12, 24]):
                                vmin=global_min, vmax=global_max, cmap='jet')
                 
                 # Set subplot title including N
-                ax.set_title(f"({letters[counter]}): $l_0$ = {l_0}, $D$ = {aD}", fontsize=16)
+                ax.set_title(f"({letters[counter]}): $l_0$ = {l_0}, $D$ = {aD}", fontsize=18)
                 if k == 0 and l == 0:
-                    ax.set_ylabel(f'N = {N}, m = {mass}', fontsize = 16)
+                    ax.set_ylabel(f'N = {N}, m = {mass}', fontsize = 18)
                 counter += 1
 
                 # Keep ticks for readability
@@ -81,14 +81,14 @@ for i, N in enumerate([12, 24]):
                     spine.set_visible(False)
 
 # Set common x and y labels
-fig.text(0.515, -0.02, r'$t$', ha='center', fontsize=16)
-fig.text(-0.02, 0.45, 'Link', va='center', rotation='vertical', fontsize=16)
+fig.text(0.515, -0.02, r'$t$', ha='center', fontsize=20)
+fig.text(-0.02, 0.45, 'Link', va='center', rotation='vertical', fontsize=20)
 
 # Add colorbar with fixed scale
 # fig.subplots_adjust(top=0.9) 
 cbar = fig.colorbar(im, ax=axes, orientation='horizontal', location='top', fraction=0.03)
 cbar.ax.tick_params(labelsize=16)  # Change this value as needed
-cbar.set_label("SEF", fontsize=16)
+cbar.set_label("SEF", fontsize=20)
 # Remove borders from the colorbar
 for spine in cbar.ax.spines.values():
     spine.set_visible(False)

@@ -345,7 +345,7 @@ def plot_subtracted_observables():
                 plt.savefig(f'Plots/EF_Middle/{file[:-3]}.png')
                 plt.close()
                             
-                sns.heatmap(z_q, cmap = 'jet', vmin = -1, vmax = 1, yticklabels = y_q)
+                sns.heatmap(z_q, cmap = 'PiYG', vmin = -1, vmax = 1, yticklabels = y_q)
                 num_xticks_to_display = 10
                 step_size = z_q.shape[1] // num_xticks_to_display
                 x_tick_positions = np.arange(0.5, z_q.shape[1], step_size, dtype = int)

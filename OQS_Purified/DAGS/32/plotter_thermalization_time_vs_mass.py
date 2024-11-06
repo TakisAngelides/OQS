@@ -37,13 +37,19 @@ for plot, mass in zip(plots, masses):
                 
                 thermalization_data[(mass, i, j)] = plot.iloc[i, j]
                 
+
 for i, index in enumerate(plot.index):
-    for j, column in enumerate(plot.columns):
-        l = []
-        for mass in masses:
-            l.append(thermalization_data[(mass, i, j)])
-        plt.plot(l)
-        plt.title(f'D = {index}, l_0 = {column}')
-        plt.savefig(f'Plots/thermalization_vs_mass/d_{index}_l0_{column}.png')
-        plt.close()
+    for mass in masses:
+        if i == 0 and mass == 0.1:
+            l = []
+            for j, column in enumerate(plot.columns):
+                l.append(thermalization_data[(mass, i, j)])
+            plt.plot(plot.columns, l, label = f'mass = {mass}, D = {index}')
+            # plt.title(f'm = {mass}, l_0 = {column}')
+            # plt.savefig(f'Plots/thermalization_vs_D/m_{mass}_l0_{column}.png')
+            # plt.close()
+        
+plt.legend()
+plt.savefig(f'Plots/thermalization_vs_D/all.png')
+
             
