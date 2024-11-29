@@ -5,7 +5,7 @@ import h5py
 from collections import defaultdict
 
 # Set the directory where files are located
-directory_path = '/lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/46/Plots/mutual_info_data'
+directory_path = '/lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/50/Plots/mutual_info_data'
 
 # Initialize a dictionary to store data, sorted by D, l_0, and m
 data_dict = defaultdict(lambda: defaultdict(dict))
@@ -19,9 +19,13 @@ linestyles = ['-', '--', '-.', ':', '-', '--', '-.', ':']
 
 # Iterate over all files in the specified directory
 for filename in os.listdir(directory_path):
+    
+    if not "2_sites" in filename:
+        continue
+    
     # Extract D, m, and l_0 values from filename
-    D, m, l_0 = filename.strip().split('_')
-    l_0 = l_0[:-3]
+    D, m, l_0, _, _ = filename.strip().split('_')
+    # l_0 = l_0[:-3]
 
     # Construct full file path
     file_path = os.path.join(directory_path, filename)
@@ -38,7 +42,7 @@ for filename in os.listdir(directory_path):
 fig, ax = plt.subplots(figsize=(10, 6))
 
 # Create inset
-ax_inset = ax.inset_axes([0.55, 0.45, 0.4, 0.5])
+ax_inset = ax.inset_axes([0.37, 0.25, 0.6, 0.7])
 # ax_inset.set_xlim(time[0], time[24])
 # ax_inset.set_ylim(-0.001, 0.003)
 
@@ -54,7 +58,7 @@ for D in sorted(data_dict):
             color = colors[line_index % len(colors)]
             linestyle = linestyles[line_index % len(linestyles)]
             ax.plot(time, mutual_info_list, label=label, color=color, linestyle=linestyle)
-            ax_inset.plot(time[:25], mutual_info_list[:25], color=color, linestyle=linestyle)
+            ax_inset.plot(time[200:400], mutual_info_list[200:400], color=color, linestyle=linestyle)
             ax_inset.set_xlabel("$t$", fontsize = 18)
             ax_inset.set_ylabel("SMI", fontsize = 16)
             
@@ -72,4 +76,4 @@ handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.25), ncol=3, fontsize = 13)
 
 # Save the plot
-plt.savefig('/lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/46/Plots/mutual_info.pdf', bbox_inches = 'tight', dpi = 1200)
+plt.savefig('/lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/46/Plots/mutual_info_2_sites.pdf', bbox_inches = 'tight', dpi = 1200)

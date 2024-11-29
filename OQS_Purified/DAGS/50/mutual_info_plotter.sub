@@ -1,0 +1,27 @@
+environment = "JULIA_DEPOT_PATH='/lustre/fs24/group/cqta/tangelides/.julia:$JULIA_DEPOT_PATH'"
+
+executable = /lustre/fs24/group/cqta/tangelides/julia-1.10.0/bin/julia
+
+arguments = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/50/mutual_info_plotter.jl
+
+transfer_input_files = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/50/mutual_info_plotter.jl
+
+should_transfer_files = IF_NEEDED
+
+# if no units are specified here, MB are considered
+
+request_memory = 6G
+
+request_cpus = 1
+
++MaxRuntime = 2*24*3600
+
+max_retries = 3
+
+error = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/50/Logs/Error/mutual_info_plotter.error
+
+output = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/50/Logs/Output/mutual_info_plotter.out                    
+
+log = /lustre/fs24/group/cqta/tangelides/OQS/OQS_Purified/DAGS/50/Logs/Log/mutual_info_plotter.log 
+
+queue

@@ -10,11 +10,11 @@ should_transfer_files = IF_NEEDED
 
 # if no units are specified here, MB are considered
 
-request_memory = 8G
+request_memory = 6G
 
-request_cpus = 8
+request_cpus = 1
 
-+MaxRuntime = 6.99*24*3600
++MaxRuntime = 2*24*3600
 
 max_retries = 3
 

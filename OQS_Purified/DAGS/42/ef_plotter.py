@@ -2,6 +2,8 @@ import os
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc 
+rc('text', usetex=True)
 
 # Parameters
 base_paths = {

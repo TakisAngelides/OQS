@@ -369,6 +369,8 @@ def plot_subtracted_observables():
                 plt.savefig(f'Plots/PN/{file[:-3]}.png')
                 plt.close()
                 
+                # print(ma, aD, l_0_1, max(-pn + pn_without_string + pn[0] - pn_without_string[0]), (-pn + pn_without_string + pn[0] - pn_without_string[0])[-1])
+                
                 fig, ax = plt.subplots()
                 ax1 = ax.twinx()
                 ax1.plot(x, energy - energy_without_string, label = "subtracted right yaxis", c = 'red')
@@ -952,11 +954,11 @@ def get_time_to_reach_the_boundary():
     # plt.close()
          
 
-write_dag()
+# write_dag()
 
 # plot_bond_dimensions()
 
-# plot_subtracted_observables()
+plot_subtracted_observables()
 
 # get_thermalization_times()
 
