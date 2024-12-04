@@ -95,6 +95,38 @@ function evolve()
 
             return mps
 
+        elseif which_initial_state == "first_naive"
+
+            x = inputs["x"]
+            l_0_initial_state = inputs["l_0_initial_state"]
+            ma = inputs["ma"]
+            lambda = inputs["lambda"]
+            max_sweeps_dmrg = inputs["msdmrg"]
+            maxdim_dmrg = inputs["mddmrg"]
+            energy_tol_dmrg = inputs["etdmrg"]
+            cutoff_dmrg = inputs["cdmrg"]
+            state = [isodd(n) ? "0" : "1" for n = 1:N]
+            psi = MPS(sites_initial_state, state)
+            H = get_aH_Hamiltonian(sites_initial_state, x, l_0_initial_state, ma, lambda)
+            sweeps = Sweeps(max_sweeps_dmrg, maxdim = maxdim_dmrg, cutoff = cutoff_dmrg)
+            observer = DMRGObserver(;energy_tol = energy_tol_dmrg)
+            gs_energy, gs = dmrg(H, psi, sweeps; outputlevel = 1, observer = observer, ishermitian = true)
+
+            state[1] = "1"
+            state[2] = "0"
+            psi = MPS(sites_initial_state, state)
+            Ms = [gs]
+            first_energy, first = dmrg(H, [gs], psi, sweeps, weight = 10, ishermitian = true, observer = observer, outputlevel = 1)
+
+            write(results_file, "first_energy", first_energy)
+            write(results_file, "first", first)
+            rho = outer(first', first) # Get the density matrix
+            rho_vec = convert(MPS, rho) # Convert the density matrix to a purified MPS
+            mps = rho_vec_to_mps(rho_vec) # Split the sites so that each site has one physical index of dimension 2
+            orthogonalize!(mps, 1) # Bring the center of orthogonalization to the very left
+
+            return mps
+
         else # case of which_initial_state = "dirac_vacuum_with_string"
 
             flip_sites = inputs["fs"]
