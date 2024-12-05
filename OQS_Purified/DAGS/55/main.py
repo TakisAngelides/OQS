@@ -99,9 +99,9 @@ def write_dag():
     lambd = 0
     number_of_time_steps_list = [2000] # needs same length as tau list
     tau_list = [0.05]
-    aD_list = [2, 5] # np.linspace(2.0, 5.0, 20)
+    aD_list = np.linspace(2.0, 5.0, 5)
     x_list = [1.0]
-    ma_list = [0.1, 1.0]
+    ma_list = [0.0]
     taylor_expansion_cutoff_1 = 1e-9
     taylor_expansion_cutoff_2 = 1e-9
     maxdim = 700
@@ -112,7 +112,7 @@ def write_dag():
     for N in [12]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
-        for aT in [10, 100]: # np.linspace(10, 100, 5):
+        for aT in [10]: # np.linspace(10, 100, 5):
             for x in x_list:
                 for ma in ma_list:
                     for aD in aD_list:
@@ -129,14 +129,14 @@ def write_dag():
                             which_steps_to_save_state = list(set(which_steps_to_save_state))
                             for cutoff in [1e-11]:
                                 for taylor_expansion_order in [2]:
-                                    for l_0_1 in [0.0, 0.5]: # np.linspace(0.0, 0.5, 20): # this is the constant part of the applied field
+                                    for l_0_1 in [0.0]: # np.linspace(0.0, 0.5, 20): # this is the constant part of the applied field
                                         for conserve_qns in ["true"]:
                                             for which_initial_state in ["first_naive", "gs_naive"]: # options are: "dirac_vacuum", "gs_naive", "dirac_vacuum_with_string", "first_naive"
                                                 for cpu in [8]:
                                         
                                                     # Memory, CPU and maximum number of days to run
                                                     # mem, cpu, days = 64, 16, 6.99
-                                                    mem, days = 8, 6.99
+                                                    mem, days = 32, 6.99
                                                     day_to_make_backup = 6
                                                     
                                                     # Job id for the dag job names and path to h5 for results
@@ -173,9 +173,9 @@ def write_dag():
                                                     g.attrs["stb"] = steps_to_backup
                                                     g.attrs["l_0_initial_state"] = l_0_1
                                                     g.attrs["msdmrg"] = 100
-                                                    g.attrs["mddmrg"] = 100
-                                                    g.attrs["etdmrg"] = 1e-11
-                                                    g.attrs["cdmrg"] = 1e-11
+                                                    g.attrs["mddmrg"] = 20
+                                                    g.attrs["etdmrg"] = 1e-9
+                                                    g.attrs["cdmrg"] = 1e-9
 
                         
                                                     # Write job to dag
@@ -912,7 +912,7 @@ def plot_subtracted_observables_gs_first_naive():
             
             if attributes_dict['wis'] == 'gs_naive':
 
-                time_step_limit = -1
+                time_step_limit = -1900
                 N = attributes_dict['N']
                 l_0_1 = attributes_dict['l_0_1']
                 ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
@@ -1065,7 +1065,7 @@ def plot_subtracted_observables_gs_first_naive():
             print(file)
   
       
-# write_dag()
+write_dag()
 
 # plot_bond_dimensions()
 

@@ -100,8 +100,8 @@ def write_dag():
     number_of_time_steps_list = [2000] # needs same length as tau list
     tau_list = [0.05]
     aD_list = [2, 5] # np.linspace(2.0, 5.0, 20)
-    x_list = [1.0]
-    ma_list = [0.1, 1.0]
+    x_list = [1.0, 2.0]
+    ma_list = [0.0]
     taylor_expansion_cutoff_1 = 1e-9
     taylor_expansion_cutoff_2 = 1e-9
     maxdim = 700
@@ -109,7 +109,7 @@ def write_dag():
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [12]:
+    for N in [12, 18]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
         for aT in [10, 100]: # np.linspace(10, 100, 5):
@@ -912,7 +912,7 @@ def plot_subtracted_observables_gs_first_naive():
             
             if attributes_dict['wis'] == 'gs_naive':
 
-                time_step_limit = -1
+                time_step_limit = -1900
                 N = attributes_dict['N']
                 l_0_1 = attributes_dict['l_0_1']
                 ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
