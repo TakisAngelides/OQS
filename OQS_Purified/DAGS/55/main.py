@@ -896,6 +896,9 @@ def plot_subtracted_observables_gs_first_naive():
     
     if not os.path.exists(f'{path_to_project_number}/Plots/ME'):
         os.makedirs(f'{path_to_project_number}/Plots/ME')
+    
+    if not os.path.exists(f'{path_to_project_number}/Plots/data'):
+        os.makedirs(f'{path_to_project_number}/Plots/data')
                 
     path_to_HDF5 = f'{path_to_project_number}/HDF5'
     
@@ -912,22 +915,22 @@ def plot_subtracted_observables_gs_first_naive():
             
             if attributes_dict['wis'] == 'gs_naive':
 
-                time_step_limit = -1900
+                time_step_limit = -1
                 N = attributes_dict['N']
                 l_0_1 = attributes_dict['l_0_1']
                 ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
-                if l_0_1 != 0.0:
-                    continue
+                # if l_0_1 != 0.0:
+                #     continue
                 # if aD != 2.0 or aD != 5.0:
                 #     continue
                 tau = attributes_dict['tau']
                 staggering = np.array([(-1)**n for n in range(N)])
                 f = h5py.File(f'{path_to_HDF5}/{file}', 'r')
-                z_configs = np.asarray(f['z_configs'])[:,:time_step_limit]
-                energy = np.asarray(f['energy'])[:time_step_limit]
-                KE = np.asarray(f['kin_energy'])[:time_step_limit]
-                ME = np.asarray(f['m_energy'])[:time_step_limit]
-                EFE = np.asarray(f['el_energy'])[:time_step_limit]
+                z_configs = np.asarray(f['z_configs'])
+                energy = np.asarray(f['energy'])
+                KE = np.asarray(f['kin_energy'])
+                ME = np.asarray(f['m_energy'])
+                EFE = np.asarray(f['el_energy'])
                 q_configs = np.array([0.5*(np.real(z_configs[:, i]) + staggering) for i in range(z_configs.shape[1])])
                 ef_configs = np.transpose(np.array([np.array([l_0_1 + sum(q_configs[i][0:j + 1]) for j in range(q_configs.shape[1] - 1)]) for i in range(q_configs.shape[0])]))
                 pn = np.array([0.5*N + 0.5*sum(np.real(z_configs[:, i]) * staggering) for i in range(z_configs.shape[1])])
@@ -940,11 +943,11 @@ def plot_subtracted_observables_gs_first_naive():
                 l_0_1 = attributes_dict_without_string['l_0_1']
                 staggering = np.array([(-1)**n for n in range(N)])
                 f_without_string = h5py.File(f'{path_to_HDF5}/{file_without_string}.h5', 'r')
-                z_configs_without_string = np.asarray(f_without_string['z_configs'])[:,:time_step_limit]
-                energy_without_string = np.asarray(f_without_string['energy'])[:time_step_limit]
-                KE_without_string = np.asarray(f_without_string['kin_energy'])[:time_step_limit]
-                ME_without_string = np.asarray(f_without_string['m_energy'])[:time_step_limit]
-                EFE_without_string = np.asarray(f_without_string['el_energy'])[:time_step_limit]
+                z_configs_without_string = np.asarray(f_without_string['z_configs'])
+                energy_without_string = np.asarray(f_without_string['energy'])
+                KE_without_string = np.asarray(f_without_string['kin_energy'])
+                ME_without_string = np.asarray(f_without_string['m_energy'])
+                EFE_without_string = np.asarray(f_without_string['el_energy'])
                 q_configs_without_string = np.array([0.5*(np.real(z_configs_without_string[:, i]) + staggering) for i in range(z_configs_without_string.shape[1])])
                 ef_configs_without_string = np.transpose(np.array([np.array([l_0_1 + sum(q_configs_without_string[i][0:j + 1]) for j in range(q_configs_without_string.shape[1] - 1)]) for i in range(q_configs_without_string.shape[0])]))
                 pn_without_string = np.array([0.5*N + 0.5*sum(np.real(z_configs_without_string[:, i]) * staggering) for i in range(z_configs_without_string.shape[1])])
@@ -971,15 +974,19 @@ def plot_subtracted_observables_gs_first_naive():
                 plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
                 plt.savefig(f'Plots/EF/{file[:-3]}.png')
                 plt.close()
+                with open(f'Plots/data/EF_{aD}.pickle', 'wb') as f:
+                    pickle.dump(z, f)
                 
-                for i in range(z.shape[0]):
-                    plt.plot(x, z[i, :], label = f'{i}, Max = {max(z[i, :]):.5f}')
+                # for i in range(z.shape[0]):
+                plt.plot(x, z[N//2 - 1, :], label = f'{N//2 - 1}, Max = {max(z[N//2 - 1, :]):.5f}')
                 plt.legend()
                 plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
                 plt.ylabel('Middle electric field')
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/EF_Middle/{file[:-3]}.png')
                 plt.close()
+                with open(f'Plots/data/EF_Middle_{aD}.pickle', 'wb') as f:
+                    pickle.dump(z[N//2-1, :], f)
                             
                 sns.heatmap(z_q, yticklabels = y_q)
                 num_xticks_to_display = 10
@@ -993,6 +1000,8 @@ def plot_subtracted_observables_gs_first_naive():
                 plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
                 plt.savefig(f'Plots/Q/{file[:-3]}.png')
                 plt.close()
+                with open(f'Plots/data/Q_{aD}.pickle', 'wb') as f:
+                    pickle.dump(z_q, f)
                                 
                 plt.plot(x, pn, label = "string")
                 plt.plot(x, pn_without_string, label = "no string")
@@ -1003,6 +1012,8 @@ def plot_subtracted_observables_gs_first_naive():
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/PN/{file[:-3]}.png')
                 plt.close()
+                with open(f'Plots/data/PN_{aD}.pickle', 'wb') as f:
+                    pickle.dump(-pn + pn_without_string, f)
                 
                 fig, ax = plt.subplots()
                 ax1 = ax.twinx()
@@ -1016,6 +1027,9 @@ def plot_subtracted_observables_gs_first_naive():
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/E/{file[:-3]}.png')
                 plt.close()
+                # print(aD, np.real((-energy + energy_without_string))[-1])
+                with open(f'Plots/data/E_{aD}.pickle', 'wb') as f:
+                    pickle.dump(-energy + energy_without_string, f)
                 
                 fig, ax = plt.subplots()
                 ax1 = ax.twinx()
@@ -1029,6 +1043,8 @@ def plot_subtracted_observables_gs_first_naive():
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/ME/{file[:-3]}.png')
                 plt.close()
+                with open(f'Plots/data/ME_{aD}.pickle', 'wb') as f:
+                    pickle.dump(-ME + ME_without_string, f)
                 
                 fig, ax = plt.subplots()
                 ax1 = ax.twinx()
@@ -1042,6 +1058,8 @@ def plot_subtracted_observables_gs_first_naive():
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/KE/{file[:-3]}.png')
                 plt.close()
+                with open(f'Plots/data/KE_{aD}.pickle', 'wb') as f:
+                    pickle.dump(-KE + KE_without_string, f)
                 
                 fig, ax = plt.subplots()
                 ax1 = ax.twinx()
@@ -1055,6 +1073,8 @@ def plot_subtracted_observables_gs_first_naive():
                 plt.xlabel(r'$t/a$')
                 plt.savefig(f'Plots/EFE/{file[:-3]}.png')
                 plt.close()
+                with open(f'Plots/data/EFE_{aD}.pickle', 'wb') as f:
+                    pickle.dump(-EFE + EFE_without_string, f)
                             
             else:
                 
@@ -1065,7 +1085,7 @@ def plot_subtracted_observables_gs_first_naive():
             print(file)
   
       
-write_dag()
+# write_dag()
 
 # plot_bond_dimensions()
 

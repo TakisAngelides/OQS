@@ -97,7 +97,7 @@ def write_dag():
     
     # Static applied field case and delta correlator
     lambd = 0
-    number_of_time_steps_list = [200] # needs same length as tau list
+    number_of_time_steps_list = [2000] # needs same length as tau list
     tau_list = [0.05]
     aD_list = np.linspace(2.0, 5.0, 5)
     x_list = [1.0]
@@ -109,7 +109,7 @@ def write_dag():
     which_applied_field = "constant" # options are: "constant", "sauter", "gaussian", "oscillatory"
     time_varying_applied_field_flag = "false" if which_applied_field == "constant" else "true"
     env_corr_type = "delta" # options are: "constant", "delta", "gaussian"
-    for N in [14, 16, 18]:
+    for N in [14]:
         dissipator_sites = [i for i in range(1, N+1)]
         flip_sites = [N//2-1, N//2 + 2] # this is for the case when the initial state is the dirac vacuum with a string and specifies where the string should be placed
         for aT in [10]: # np.linspace(10, 100, 5):
@@ -919,8 +919,8 @@ def plot_subtracted_observables_gs_first_naive():
                 N = attributes_dict['N']
                 l_0_1 = attributes_dict['l_0_1']
                 ma, aD, aT, cqns, cutoff, l_0_1, teo, waf, x_val = attributes_dict['ma'], attributes_dict['aD'], attributes_dict['aT'], attributes_dict['cqns'], attributes_dict['cutoff'], attributes_dict['l_0_1'], attributes_dict['teo'], attributes_dict['waf'], np.round(attributes_dict['x'], decimals = 3)
-                if N != 14:
-                    continue
+                # if N != 14:
+                #     continue
                 # if l_0_1 != 0.0:
                 #     continue
                 # if aD != 2.0 or aD != 5.0:
@@ -980,7 +980,7 @@ def plot_subtracted_observables_gs_first_naive():
                     pickle.dump(z, f)
                 
                 # for i in range(z.shape[0]):
-                plt.plot(x, z[N//2 - 1, :], label = f'{N//2 - 1}, Max = {max(z[N//2 - 1, :]):.5f}, Min = {min(z[N//2 - 1, :]):.5f}')
+                plt.plot(x, z[N//2 - 1, :], label = f'{N//2 - 1}, Max = {max(z[N//2 - 1, :]):.5f}')
                 plt.legend()
                 plt.title(f'N_{N}_x_{x_val}_ma_{ma}_aD_{aD}_aT_{aT}_qn_{cqns}\nc_{cutoff}_l01_{l_0_1}_tau_{tau}_taylor_{teo}_waf_{waf}')
                 plt.ylabel('Middle electric field')
