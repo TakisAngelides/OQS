@@ -13,9 +13,9 @@ rc('text', usetex=True)
 
 def plot_ef_symmetry():
             
-    f_inputs = h5py.File("/Users/takisangelides/Downloads/inputs.h5", 'r')
+    f_inputs = h5py.File("/Users/takisangelides/Downloads/Plotting_for_OQS_Paper/inputs.h5", 'r')
 
-    for file in os.listdir("/Users/takisangelides/Downloads/HDF5"):
+    for file in os.listdir("/Users/takisangelides/Downloads/Plotting_for_OQS_Paper/HDF5"):
         
         # try:
         
@@ -35,7 +35,7 @@ def plot_ef_symmetry():
             if tau > 0.002:
                 continue
             staggering = np.array([(-1)**n for n in range(N)])
-            f = h5py.File(f'{"/Users/takisangelides/Downloads/HDF5"}/{file}', 'r')
+            f = h5py.File(f'{"/Users/takisangelides/Downloads/Plotting_for_OQS_Paper/HDF5"}/{file}', 'r')
             try:
                 z_configs = np.asarray(f['z_configs'])
             except:
@@ -51,7 +51,7 @@ def plot_ef_symmetry():
             N = attributes_dict_without_string['N']
             l_0_1 = attributes_dict_without_string['l_0_1']
             staggering = np.array([(-1)**n for n in range(N)])
-            f_without_string = h5py.File(f'{"/Users/takisangelides/Downloads/HDF5"}/{file_without_string}.h5', 'r')
+            f_without_string = h5py.File(f'{"/Users/takisangelides/Downloads/Plotting_for_OQS_Paper/HDF5"}/{file_without_string}.h5', 'r')
             try:
                 z_configs_without_string = np.asarray(f_without_string['z_configs'])
             except:
@@ -74,6 +74,8 @@ def plot_ef_symmetry():
             ax_top.set_ylabel(r"$L$", fontsize=24)
             ax_top.tick_params(axis='both', labelsize=24)
             ax_top.set_xticklabels([])
+            for spine in ax_top.spines.values():
+                spine.set_visible(False)
 
             # Adding custom ticks for `ax_top`
             full_links = [0, z.shape[0]//2, z.shape[0] - 1]  # Start, middle, end links
@@ -89,6 +91,8 @@ def plot_ef_symmetry():
                                         extent=[t_over_a_list[0], t_over_a_list[-1], middle_links_start, middle_links_end], cmap='jet')
             ax_middle.set_ylabel(r"$L$", fontsize=24)
             ax_middle.tick_params(axis='both', labelsize=24)
+            for spine in ax_middle.spines.values():
+                spine.set_visible(False)
 
             # Adding custom ticks for `ax_middle`
             middle_links = [middle_links_start, (middle_links_start + middle_links_end) // 2, middle_links_end]  # Start, middle, end links

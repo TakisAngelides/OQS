@@ -74,6 +74,7 @@ ax[1, 1].text(0.5, 1.07, r'$(d)$', fontsize=20, transform=ax[1, 1].transAxes, ha
 cbar_d = fig.colorbar(im_d, ax=ax[1, 1], fraction=0.046, pad=0.04)
 cbar_d.ax.tick_params(labelsize=20)
 cbar_d.set_label(r'$\Delta F$', fontsize=20)
+cbar_d.outline.set_edgecolor('none')
 
 # Adjust layout for better spacing
 plt.tight_layout()
