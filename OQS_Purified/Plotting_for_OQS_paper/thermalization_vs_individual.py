@@ -62,13 +62,30 @@ for i, df in enumerate(plots):
         
         axes[0].errorbar(D_values, thermalization_times, yerr=0.1, fmt=marker_list[counter],
                          linestyle=linestyles[counter % len(linestyles)], color=colors[counter % len(colors)],
-                         label=rf'${labels[i]}, l_0 = {l0:.2f}$', markerfacecolor='none')        
+                         label='$l_0 = $'+f'${l0:.2f}$', markerfacecolor='none')        
         counter += 1
 
-axes[0].set_xlabel(r'$D$', fontsize=18)
-axes[0].set_ylabel(r'$\mathcal{T}$', fontsize=18)
-axes[0].legend(fontsize = 10, loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
-axes[0].tick_params(labelsize=18)
+axes[0].set_xlabel(r'$D$', fontsize=24)
+axes[0].set_ylabel(r'$\mathcal{T}$', fontsize=24)
+
+#---------
+
+h, l = axes[0].get_legend_handles_labels()
+ph = [axes[0].plot([],marker="", ls="")[0]]*2
+handles = [ph[0]] + [h[0], h[1], h[2]] + [ph[1]] + [h[3], h[4], h[5]]
+labels = ["$m=0.1$"] + [l[0], l[1], l[2]] + ["$m=1.0$"] + [l[3], l[4], l[5]]
+leg = axes[0].legend(handles, labels, fontsize = 14, loc='upper center', bbox_to_anchor=(0.5, 1.25), ncol=2, columnspacing = 0.7)
+for vpack in leg._legend_handle_box.get_children():
+    for hpack in vpack.get_children()[:1]:
+        hpack.get_children()[0].set_width(0)
+            
+# for text in leg.get_texts():
+#     text.set_ha('center')
+
+#---------
+
+# axes[0].legend(fontsize = 11, loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
+axes[0].tick_params(labelsize=24)
 
 # Second subplot: thermalization time vs l_0 for D = 2, 5 and mass = 0.1, 1.0
 counter = 0
@@ -83,12 +100,29 @@ for i, df in enumerate(plots):
         
         axes[1].errorbar(l0_values, thermalization_times, yerr=0.1, fmt=marker_list[counter],
                          linestyle=linestyles[counter % len(linestyles)], color=colors[counter % len(colors)],
-                         label=f'${labels[i]}, D = {D:.2f}$', markerfacecolor='none')
+                         label=f'$D = $' + f'${D:.2f}$', markerfacecolor='none')
         counter += 1
 
-axes[1].set_xlabel(r'$l_0$', fontsize=18)
-axes[1].legend(fontsize = 10, loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
-axes[1].tick_params(labelsize=18)
+axes[1].set_xlabel(r'$l_0$', fontsize=24)
+
+#---------
+
+h, l = axes[1].get_legend_handles_labels()
+ph = [axes[0].plot([],marker="", ls="")[0]]*2
+handles = [ph[0]] + [h[0], h[1], h[2]] + [ph[1]] + [h[3], h[4], h[5]]
+labels = ["$m=0.1$"] + [l[0], l[1], l[2]] + ["$m=1.0$"] + [l[3], l[4], l[5]]
+leg = axes[1].legend(handles, labels, fontsize = 14, loc='upper center', bbox_to_anchor=(0.5, 1.25), ncol=2, columnspacing = 0.7)
+for vpack in leg._legend_handle_box.get_children():
+    for hpack in vpack.get_children()[:1]:
+        hpack.get_children()[0].set_width(0)
+        
+# for text in leg.get_texts():
+#     text.set_ha('center')
+
+#---------
+
+# axes[1].legend(fontsize = 11, loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
+axes[1].tick_params(labelsize=24)
 axes[1].set_yticklabels([])  # Remove y-axis labels for second subplot
 # axes[1].set_yscale('log')
 # axes[1].set_xscale('log')
@@ -112,14 +146,31 @@ for idx, ((l_0_1, aD), ma_dict) in enumerate(sorted_data_dict):
     ma_values = sorted(ma_dict.keys())
     thermalization_times = [ma_dict[ma] for ma in ma_values]
     color, linestyle = line_combinations[idx % len(line_combinations)]
-    label = f"$l_0={l_0_1:.2f}, aD={aD:.2f}$"
+    label = '$D = $' + f'${aD:.2f}$'
     axes[2].errorbar(ma_values, thermalization_times, yerr=0.1, fmt=marker_list[idx],
                      label=label, color=colors[idx], linestyle=linestyle, markerfacecolor='none')
 
-axes[2].set_xlabel(r"$m$", fontsize=18)
-axes[2].legend(loc="upper center", bbox_to_anchor=(0.5, 1.2215), ncol=2, fontsize = 10)
+axes[2].set_xlabel(r"$m$", fontsize=24)
+
+#---------
+
+h, l = axes[2].get_legend_handles_labels()
+ph = [axes[2].plot([],marker="", ls="")[0]]*3
+handles = ph[:1] + [h[0], h[1], h[2]] + ph[1:2] + [h[3], h[4], h[5]] + ph[2:] + [h[6], h[7], h[8]]
+labels = ["$l_0=0.0$"] + l[0:3] + ["$l_0=0.26$"] + l[3:6] + ["$l_0=0.5$"] + l[6:9]
+leg = axes[2].legend(handles, labels, fontsize = 14, loc='upper center', bbox_to_anchor=(0.5, 1.25), ncol=3, columnspacing = 0.7)
+for vpack in leg._legend_handle_box.get_children():
+    for hpack in vpack.get_children()[:1]:
+        hpack.get_children()[0].set_width(0)
+        
+# for text in leg.get_texts():
+#     text.set_ha('center')
+
+#---------
+
+# axes[2].legend(loc="upper center", bbox_to_anchor=(0.5, 1.2215), ncol=2, fontsize = 11)
 axes[2].set_yticklabels([])  # Remove y-axis labels for third subplot
-axes[2].tick_params(labelsize=18)
+axes[2].tick_params(labelsize=24)
 
 annotations = [r'$(a)$', r'$(b)$', r'$(c)$']
 for ax, annotation in zip(axes, annotations):

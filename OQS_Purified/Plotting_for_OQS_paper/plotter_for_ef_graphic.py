@@ -81,7 +81,7 @@ for i, N in enumerate([12]):
                                     extent=[t_over_a_list[0], t_over_a_list[tt], 0, ef_values.shape[0]],
                                     vmin=np.min(ef_values[:, :tt]), vmax=np.max(ef_values[:, :tt]), cmap='jet')
                 
-                axs[0].set_ylabel(r'$L$', fontsize=24)
+                axs[0].set_ylabel(r'$n$', fontsize=24)
                 axs[0].tick_params(axis='y', labelsize=24)
                 axs[0].set_yticks(range(0, 11))
                 
@@ -91,7 +91,7 @@ for i, N in enumerate([12]):
                 # Add colorbar for EF
                 cbar1 = fig.colorbar(im1, ax=axs[0], orientation='horizontal', location='top', fraction=0.03)
                 cbar1.ax.tick_params(labelsize=24)
-                cbar1.set_label(r'$(a): $' + r'$\Delta F$', fontsize=24)
+                cbar1.set_label(r'$(a): $' + r'$\Delta F(n)$', fontsize=24)
                 
                 # Q Heatmap
                 tt = 700
@@ -109,7 +109,7 @@ for i, N in enumerate([12]):
                 # Add colorbar for Q
                 cbar2 = fig.colorbar(im2, ax=axs[1], orientation='horizontal', location='top', fraction=0.03)
                 cbar2.ax.tick_params(labelsize=24)
-                cbar2.set_label(r'$(b): $' + r'$\Delta Q$', fontsize=24)
+                cbar2.set_label(r'$(b): $' + r'$\Delta Q(n)$', fontsize=24)
                 
                 for spine in cbar1.ax.spines.values():
                     spine.set_visible(False)

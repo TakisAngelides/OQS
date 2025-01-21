@@ -69,7 +69,8 @@ for idx, D in enumerate(D_panel):
     
     EF = data_dict[f'EF_{D}']
     axes[idx].set_xlabel('$t$')
-    axes[idx].set_ylabel(f'{text_list[idx]}: ' + '$L$')
+    axes[idx].set_ylabel('$n$')
+    axes[idx].text(6.7, 11.7, rf'${text_list[idx]}$', fontsize=20)
     
     im = axes[idx].imshow(
         EF[:, :keep],
@@ -85,7 +86,7 @@ for idx, D in enumerate(D_panel):
 # Add a single colorbar for the EF panels with global vmin and vmax
 cbar_ax = fig.add_axes([0.31, 0.9, 0.4, 0.03])  # Define the location and size of the colorbar
 cbar = fig.colorbar(im, cax=cbar_ax, orientation='horizontal', location = 'top')
-cbar.set_label('$\Delta F_{B}$')
+cbar.set_label('$\Delta F_{B}(n)$')
 
 for spine in cbar_ax.spines.values():
     spine.set_visible(False)
@@ -122,7 +123,9 @@ axes[3].errorbar(
     markersize = 15
 )
 axes[3].set_xlabel('$D$')
-axes[3].set_ylabel('$(d)$: $\mathcal{T}_{\Delta F_B}$, $\mathcal{T}_{\Delta E_B}$')
+axes[3].set_ylabel('$\mathcal{T}_{\Delta F_B}$, $\mathcal{T}_{\Delta E_B}$')
+# axes[3].text(4.8, 2.5, r'$(d)$', fontsize=20)
+axes[3].text(0.97, 0.13, r'$(d)$', transform=axes[3].transAxes, fontsize=20, va='bottom', ha='right')
 axes[3].legend()
 
 # Subplots 4 and 5: Middle EF and Energy with linestyles and insets
@@ -153,7 +156,7 @@ for idx, (ax, data_key) in enumerate(zip([axes[4], axes[5]], ['EF', 'E'])):
             linestyle=linestyles[i]
         )
     inset.set_xlabel('$t$', fontsize=14)
-    inset.set_ylabel('$\Delta F_{B}$' if data_key == 'EF' else '$\Delta E_{B}$', fontsize=14)
+    inset.set_ylabel('$\Delta F_{B}(n = 6)$' if data_key == 'EF' else '$\Delta E_{B}$', fontsize=14)
     inset.tick_params(axis='both', which='both', labelsize=12, direction = 'in')
 
 # Add a common legend for Subplots 4 and 5
@@ -162,10 +165,15 @@ axes[4].legend(
 )
 
 axes[4].set_xlabel('$t$')
-axes[4].set_ylabel('$(e)$: $\Delta F_{B}(L = 6)$')
+axes[4].set_ylabel('$\Delta F_{B}(n = 6)$')
+# axes[4].text(94.0, 0.01, r'$(e)$', fontsize=20)
+axes[4].text(0.97, 0.13, r'$(e)$', transform=axes[4].transAxes, fontsize=20, va='bottom', ha='right')
 
 axes[5].set_xlabel('$t$')
-axes[5].set_ylabel('$(f)$: $\Delta E_{B}$')
+axes[5].set_ylabel('$\Delta E_{B}$')
+# axes[5].text(0.9, 0.1, r'$(f)$', fontsize=20)
+axes[5].text(0.97, 0.13, r'$(f)$', transform=axes[5].transAxes, fontsize=20, va='bottom', ha='right')
+
 
 for i in [3, 4, 5]:
     axes[i].tick_params(axis = "both", direction = "in")
@@ -183,7 +191,8 @@ for D in D_list:
     ax1.plot(t, PN, linestyle='-', label=f'$D = {D}$')
 
 ax1.set_xlabel('$t$')
-ax1.set_ylabel('$(a)$: $\Delta P_B$')
+ax1.set_ylabel('$\Delta \mathcal{P}_B$')
+ax1.text(0.95, 0.965, r'$(a)$', transform=ax1.transAxes, fontsize=20, va='top', ha='left')
 
 # Plot KE observable for all D values as 'b'
 for D in D_list:
@@ -191,7 +200,9 @@ for D in D_list:
     ax2.plot(t, KE, linestyle='-')
 
 ax2.set_xlabel('$t$')
-ax2.set_ylabel('$(b)$: $\Delta K_B$')
+ax2.set_ylabel('$\Delta K_B$')
+ax2.text(0.95, 0.965, r'$(b)$', transform=ax2.transAxes, fontsize=20, va='top', ha='left')
+
 
 # Add a common legend for both subplots with 5 columns in a single row
 fig.legend(
@@ -205,13 +216,13 @@ fig.legend(
 start_inset = 800
 for ax, data_key in zip([ax1, ax2], ['PN', 'KE']):
     ax.tick_params(axis = 'both', direction = 'in')
-    inset = ax.inset_axes([0.3, 0.3, 0.65, 0.65])
+    inset = ax.inset_axes([0.25, 0.3, 0.65, 0.65])
     for i, D in enumerate(D_list):
         data = data_dict[f'{data_key}_{D}'][start_inset:] if data_key == 'PN' else data_dict[f'{data_key}_{D}'][start_inset:]
         inset.plot(t[start_inset:], data, linestyle=linestyles[i])
     inset.set_xlabel('$t$', fontsize=14)
     if data_key == 'PN':
-        data_key_label = '$\Delta P_B$'
+        data_key_label = '$\Delta \mathcal{P}_B$'
     else:
         data_key_label = '$\Delta K_B$'
     inset.set_ylabel(f'{data_key_label}', fontsize=14)

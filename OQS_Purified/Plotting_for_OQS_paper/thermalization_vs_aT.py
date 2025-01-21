@@ -130,5 +130,5 @@ for (ma, l_0_1, aD) in sorted_keys:
 # Step 3: Finalize the plot
 plt.xlabel("$T$")
 plt.ylabel("$\mathcal{T}$")
-plt.legend(loc="upper center", fontsize=12, ncol=4, bbox_to_anchor=(0.5, 1.125))
+plt.legend(loc="upper center", fontsize=14, ncol=3, bbox_to_anchor=(0.5, 1.17))
 plt.savefig("thermalization_time_vs_aT.pdf", bbox_inches='tight', dpi = 1200)

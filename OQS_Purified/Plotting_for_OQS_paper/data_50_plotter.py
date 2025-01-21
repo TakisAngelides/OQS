@@ -41,7 +41,7 @@ ax[0, 0].legend(fontsize=16, loc='upper right')
 ax[0, 0].set_xlabel('$t$', fontsize=20)
 ax[0, 0].set_ylabel('$\Delta K$', fontsize=20)
 ax[0, 0].tick_params(axis='both', direction='in', labelsize=20)
-ax[0, 0].text(0.5, 1.07, r'$(a)$', fontsize=20, transform=ax[0, 0].transAxes, ha='center', va='center')
+ax[0, 0].text(0.9, 0.65, r'$(a)$', fontsize=20, transform=ax[0, 0].transAxes)
 
 # Plot (b) in the top-right subplot
 ax[0, 1].plot(t_vals, pn7, label='$T = 7$, $\mathcal{P}(t = 100) = $' + f' ${pn7[-1]:.3f}$')
@@ -50,15 +50,15 @@ ax[0, 1].legend(fontsize=16, loc='lower right')
 ax[0, 1].set_xlabel('$t$', fontsize=20)
 ax[0, 1].set_ylabel('$\mathcal{P}$', fontsize=20)
 ax[0, 1].tick_params(axis='both', direction='in', labelsize=20)
-ax[0, 1].text(0.5, 1.07, r'$(b)$', fontsize=20, transform=ax[0, 1].transAxes, ha='center', va='center')
+ax[0, 1].text(0.9, 0.65, r'$(b)$', fontsize=20, transform=ax[0, 1].transAxes)
 
 # Plot (c) in the bottom-left subplot with time values on the x-axis
 im_c = ax[1, 0].imshow(EF7, aspect='auto', origin='lower', cmap='jet',
                        extent=[t_vals[0], t_vals[-1], 0, EF7.shape[0]])
 ax[1, 0].set_xlabel('$t$', fontsize=20)
-ax[1, 0].set_ylabel('$L$', fontsize=20)
+ax[1, 0].set_ylabel('$n$', fontsize=20)
 ax[1, 0].tick_params(axis='both', labelsize=20)
-ax[1, 0].text(0.5, 1.07, r'$(c)$', fontsize=20, transform=ax[1, 0].transAxes, ha='center', va='center')
+ax[1, 0].text(0.02, 0.05, r'$(c)$', fontsize=20, transform=ax[1, 0].transAxes, color = 'white')
 # Add colorbar for (c)
 # cbar_c = fig.colorbar(im_c, ax=ax[1, 0], fraction=0.046, pad=0.04)
 # cbar_c.ax.tick_params(labelsize=16)
@@ -67,13 +67,13 @@ ax[1, 0].text(0.5, 1.07, r'$(c)$', fontsize=20, transform=ax[1, 0].transAxes, ha
 im_d = ax[1, 1].imshow(EF100, aspect='auto', origin='lower', cmap='jet',
                        extent=[t_vals[0], t_vals[-1], 0, EF100.shape[0]])
 ax[1, 1].set_xlabel('$t$', fontsize=20)
-ax[1, 1].set_ylabel('$L$', fontsize=20)
+ax[1, 1].set_ylabel('$n$', fontsize=20)
 ax[1, 1].tick_params(axis='both', labelsize=20)
-ax[1, 1].text(0.5, 1.07, r'$(d)$', fontsize=20, transform=ax[1, 1].transAxes, ha='center', va='center')
+ax[1, 1].text(0.02, 0.05, r'$(d)$', fontsize=20, transform=ax[1, 1].transAxes, color = 'white')
 # Add colorbar for (d)
 cbar_d = fig.colorbar(im_d, ax=ax[1, 1], fraction=0.046, pad=0.04)
 cbar_d.ax.tick_params(labelsize=20)
-cbar_d.set_label(r'$\Delta F$', fontsize=20)
+cbar_d.set_label(r'$\Delta F(n)$', fontsize=20)
 cbar_d.outline.set_edgecolor('none')
 
 # Adjust layout for better spacing

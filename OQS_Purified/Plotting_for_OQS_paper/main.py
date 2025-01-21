@@ -9,6 +9,7 @@ import pickle
 from matplotlib.ticker import LogFormatterMathtext
 from matplotlib import rc 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 rc('text', usetex=True)
 
 def plot_ef_symmetry():
@@ -71,7 +72,7 @@ def plot_ef_symmetry():
             # Top subplot (full data)
             ax_top = fig.add_subplot(3, 1, 1)
             im = ax_top.imshow(z, aspect='auto', origin='lower', extent=[t_over_a_list[0], t_over_a_list[-1], 0, z.shape[0]], cmap='jet')
-            ax_top.set_ylabel(r"$L$", fontsize=24)
+            ax_top.set_ylabel(r"$n$", fontsize=24)
             ax_top.tick_params(axis='both', labelsize=24)
             ax_top.set_xticklabels([])
             for spine in ax_top.spines.values():
@@ -89,7 +90,7 @@ def plot_ef_symmetry():
             ax_middle = fig.add_subplot(3, 1, 2)
             im_middle = ax_middle.imshow(z[middle_links_start:middle_links_end, :], aspect='auto', origin='lower',
                                         extent=[t_over_a_list[0], t_over_a_list[-1], middle_links_start, middle_links_end], cmap='jet')
-            ax_middle.set_ylabel(r"$L$", fontsize=24)
+            ax_middle.set_ylabel(r"$n$", fontsize=24)
             ax_middle.tick_params(axis='both', labelsize=24)
             for spine in ax_middle.spines.values():
                 spine.set_visible(False)
@@ -125,14 +126,14 @@ def plot_ef_symmetry():
             # fig.subplots_adjust(hspace=0.4)
             cbar = fig.colorbar(im, ax=[ax_top, ax_middle], location='top', fraction=0.05)
             cbar.ax.tick_params(labelsize=20)
-            cbar.set_label(r"$\Delta F$", fontsize=24)
+            cbar.set_label(r"$\Delta F(n)$", fontsize=24)
             for spine in cbar.ax.spines.values():
                 spine.set_visible(False)
 
             # Adjust layout and annotations
-            fig.text(0.99, 0.79, r'$(a)$', ha='center', fontsize=20)
-            fig.text(0.99, 0.52, r'$(b)$', ha='center', fontsize=20)
-            fig.text(0.99, 0.23, r'$(c)$', ha='center', fontsize=20)
+            fig.text(0.165, 0.71, r'$(a)$', ha='center', fontsize=20, color = 'white')
+            fig.text(0.165, 0.44, r'$(b)$', ha='center', fontsize=20, color = 'white')
+            fig.text(0.165, 0.13, r'$(c)$', ha='center', fontsize=20)
 
             # Save figure
             plt.savefig(f'ef_symmetry_{tau}.pdf', bbox_inches='tight', dpi=1200)

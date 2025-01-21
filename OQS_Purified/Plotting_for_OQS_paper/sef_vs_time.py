@@ -110,9 +110,9 @@ main_ax.tick_params(axis='both', direction='in', labelsize=24)
 inset_ax.tick_params(axis='both', direction='in', labelsize=24)
 
 main_ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=3, fontsize=18)
-main_ax.set_ylabel(r'$\Delta F(L = 5)$', fontsize=24)
+main_ax.set_ylabel(r'$\Delta F(n = 5)$', fontsize=24)
 main_ax.set_xlabel(r'$t$', fontsize=24)
-inset_ax.set_ylabel(r'$\Delta F(L = 5)$', fontsize=20)
+inset_ax.set_ylabel(r'$\Delta F(n = 5)$', fontsize=20)
 inset_ax.set_xlabel(r'$t$', fontsize=20)
 inset_ax.yaxis.get_offset_text().set_fontsize(20)  # Set to desired font size
 
